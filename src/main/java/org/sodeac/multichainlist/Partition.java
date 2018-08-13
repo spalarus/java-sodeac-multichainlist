@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.sodeac.multichainlist;
 
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
@@ -197,13 +198,13 @@ public class Partition<E>
 			{
 				if(next.version.getSequence() < currentVersion.getSequence())
 				{
-					next = next.linkage.createNewVersion2(currentVersion);
+					next = next.linkage.createNewHead(currentVersion);
 				}
 				
 				if(prev.version.getSequence() < currentVersion.getSequence())
 				{
 					previewsOfPreviews = prev.previewsLink;
-					prev = prev.linkage.createNewVersion2(currentVersion);
+					prev = prev.linkage.createNewHead(currentVersion);
 				}
 			}
 			
@@ -226,6 +227,46 @@ public class Partition<E>
 			
 			linkBegin.incrementSize();
 			linkEnd.incrementSize();
+		}
+	}
+	
+	public int getSize(String chainName)
+	{
+		multiChainList.getReadLock().lock();
+		try
+		{
+			ChainEndpointLinkage<E> endpointLinkage = chainBegin.getLink(chainName);
+			return endpointLinkage == null ? 0 : (int)endpointLinkage.size;
+		}
+		finally 
+		{
+			multiChainList.getReadLock().unlock();
+		}
+	}
+	
+	public E getFirstElement(String chainName)
+	{
+		multiChainList.getReadLock().lock();
+		try
+		{
+			ChainEndpointLinkage<E> endpointLinkage = chainBegin.getLink(chainName);
+			if(endpointLinkage == null)
+			{
+				throw new NoSuchElementException();
+			}
+			if(endpointLinkage.head == null)
+			{
+				throw new NoSuchElementException();
+			}
+			if(endpointLinkage.head.nextLink == null)
+			{
+				throw new NoSuchElementException();
+			}
+			return endpointLinkage.head.nextLink.element;
+		}
+		finally 
+		{
+			multiChainList.getReadLock().unlock();
 		}
 	}
 	

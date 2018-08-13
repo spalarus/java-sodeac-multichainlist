@@ -187,6 +187,60 @@ public class MultiChainList<E>
 		return nodes;
 	}
 	
+	@SuppressWarnings("unchecked")
+	public Node<E> append(E element, LinkageDefinition<E>[] linkageDefinitions)
+	{
+		Node<E> node = null;
+		
+		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		{
+			linkageDefinitions = (LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS;
+		}
+		
+		writeLock.lock();
+		try
+		{
+			Partition<E> partition = null;
+			getModificationVersion();
+			
+			refactorLinkageDefintions(linkageDefinitions);
+			
+			node = new Node<E>(element,this);
+			for(Entry<String,Set<String>> entry : _cachedContainerChainSetForPartition.entrySet())
+			{
+				if(partition == null)
+				{
+					partition = this.partitionList.get(entry.getKey());
+				}
+				else
+				{
+					if(entry.getKey() == null)
+					{
+						if(partition.getName() != null)
+						{
+							partition = this.partitionList.get(entry.getKey());
+						}
+					}
+					else
+					{
+						if(! entry.getKey().equals(partition.getName()))
+						{
+							partition = this.partitionList.get(entry.getKey());
+						}
+					}
+				}
+				partition.appendNode(node, entry.getValue(), modificationVersion);
+			}
+			
+		}
+		finally 
+		{
+			clearRefacotrLinkageDefinition();
+			writeLock.unlock();
+		}
+		return node;
+	}
+	
 	public List<String> getPartitionNameList()
 	{
 		List<String> partitionList = this.partitionNameList;

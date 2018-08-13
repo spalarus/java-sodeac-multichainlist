@@ -12,6 +12,7 @@ package org.sodeac.multichainlist;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
@@ -224,6 +225,45 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		throw new UnsupportedOperationException();
 	}
 	
+	public E getFirstElement()
+	{
+		Link<E> firstLink = getFirstLink();
+		if(firstLink == null)
+		{
+			throw new NoSuchElementException();
+		}
+		return firstLink.element;
+	}
+
+	public Link<E> getFirstLink()
+	{
+		if(this.closed)
+		{
+			throw new RuntimeException("snapshot is closed");
+		}
+		
+		if(this.chainBeginVersion == null)
+		{
+			return null;
+		}
+		
+		Link<E> next = this.chainBeginVersion.nextLink;
+		if(next == null)
+		{
+			return null;
+		}
+		
+		if(next.version.getSequence() > Snapshot.this.version.getSequence())
+		{
+			throw new RuntimeException("intern link error: mission link with version " + Snapshot.this.version.getSequence() );
+		}
+		if(!  next.node.isPayload())
+		{
+			return null;
+		}
+		return next;
+	}
+	
 	private class LinkVersionSnapshotIterator extends SnapshotIterator implements Iterator<Link<E>>
 	{
 		
@@ -231,7 +271,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		public Link<E> next()
 		{
 			if(Snapshot.this.closed)
-				{
+			{
 				throw new RuntimeException("snapshot is closed");
 			}
 			try
@@ -242,7 +282,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 			{
 				super.previews = super.next;
 				super.next = null;
-		
+				super.nextCalculated = false;
 			}
 		}
 	}
@@ -258,12 +298,24 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 			}
 			try
 			{
+				if(! super.nextCalculated)
+				{
+					if(! super.hasNext())
+					{
+						throw new NoSuchElementException();
+					}
+				}
+				if(super.next == null)
+				{
+					throw new NoSuchElementException();
+				}
 				return super.next.getElement();
 			}
 			finally 
 			{
 				super.previews = super.next;
 				super.next = null;
+				super.nextCalculated = false;
 			}
 		}
 	}
@@ -272,6 +324,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 	{
 		private Link<E> previews = null;
 		private Link<E> next = null;
+		private boolean nextCalculated = false;
 		
 		private SnapshotIterator()
 		{
@@ -293,6 +346,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 				throw new RuntimeException("snapshot is closed");
 			}
 			
+			nextCalculated = true;
 			if(next != null)
 			{
 				return true;

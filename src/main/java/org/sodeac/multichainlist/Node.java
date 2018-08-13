@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.locks.Lock;
 
 import javax.naming.OperationNotSupportedException;
 
@@ -99,7 +98,7 @@ public class Node<E>
 		
 	}
 	
-	public final void addLinks(LinkageDefinition<E>[] linkageDefinitions)
+	public final void link(LinkageDefinition<E>[] linkageDefinitions)
 	{
 		if(! isPayload())
 		{
@@ -151,82 +150,113 @@ public class Node<E>
 		}
 	}
 	
-	public final boolean removeLink(String chainName)
+	public final void unlinkAllChains()
 	{
 		if(! isPayload())
 		{
 			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
 		}
-		if(element == null)
-		{
-			return false;
-		}
-		Lock lock = multiChainList.getWriteLock();
-		lock.lock();
+		multiChainList.getWriteLock().lock();
 		try
 		{
-			if(element == null)
+			if(this.defaultChainLinkage != null)
 			{
-				return false;
+				unlink(this.defaultChainLinkage);
 			}
-			
+			if(additionalLinkages != null)
+			{
+				for(Linkage<E> linkage : additionalLinkages.values())
+				{
+					unlink(linkage);
+				}
+			}
+		}
+		finally 
+		{
+			multiChainList.getWriteLock().unlock();
+		}
+	}
+	
+	public final boolean unlink(String chainName)
+	{
+		if(! isPayload())
+		{
+			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+		}
+		multiChainList.getWriteLock().lock();
+		try
+		{
 			Linkage<E> link = getLink(chainName);
 			if(link == null)
 			{
 				return false;
 			}
-			Partition<E> partition = link.partition;
-			SnapshotVersion currentVersion = partition.multiChainList.getModificationVersion();
-			ChainEndpointLinkage<E> linkBegin = partition.getChainBegin().getLink(chainName);
-			ChainEndpointLinkage<E> linkEnd = partition.getChainEnd().getLink(chainName);
-			
-			Link<E> prev = link.head.previewsLink;
-			Link<E> next = link.head.nextLink;
-			
-			Link<E> previewsOfPreviews = null;
-			if((prev.version != currentVersion) || (next.version != currentVersion))
-			{
-				
-				if(next.version.getSequence() < currentVersion.getSequence())
-				{
-					next = next.linkage.createNewVersion2(currentVersion);
-				}
-				if(prev.version.getSequence() < currentVersion.getSequence())
-				{
-					previewsOfPreviews = prev.previewsLink;
-					prev = prev.linkage.createNewVersion2(currentVersion);
-				}
-			}
-			
-			// link next link to previews link
-			next.previewsLink = prev;
-			
-			// link previews link to next link (set new route)
-			prev.nextLink = next;
-			
-			if(previewsOfPreviews != null)
-			{
-				// set new route, if previews creates a new version
-				previewsOfPreviews.nextLink = prev;
-			}
-			
-			currentVersion.addModifiedLink(link.head);
-			
-			linkBegin.decrementSize();
-			linkEnd.decrementSize();
-			
-			if(link == defaultChainLinkage)
-			{
-				defaultChainLinkage = null;
-			}
-			else if(additionalLinkages !=  null)
-			{
-				additionalLinkages.remove(chainName);
-			}
+			return unlink(link);
 		}
 		finally 
 		{
-			lock.unlock();
+			multiChainList.getWriteLock().unlock();
+		}
+		
+	}
+	
+	private final boolean unlink(Linkage<E> linkage)
+	{
+		if(! isPayload())
+		{
+			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+		}
+		if(linkage == null)
+		{
+			return false;
+		}
+		Partition<E> partition = linkage.partition;
+		SnapshotVersion currentVersion = partition.multiChainList.getModificationVersion();
+		ChainEndpointLinkage<E> linkBegin = partition.getChainBegin().getLink(linkage.chainName);
+		ChainEndpointLinkage<E> linkEnd = partition.getChainEnd().getLink(linkage.chainName);
+			
+		Link<E> prev = linkage.head.previewsLink;
+		Link<E> next = linkage.head.nextLink;
+			
+		Link<E> previewsOfPreviews = null;
+		if((prev.version != currentVersion) || (next.version != currentVersion))
+		{
+				
+			if(next.version.getSequence() < currentVersion.getSequence())
+			{
+				next = next.linkage.createNewHead(currentVersion);
+			}
+			if(prev.version.getSequence() < currentVersion.getSequence())
+			{
+				previewsOfPreviews = prev.previewsLink;
+				prev = prev.linkage.createNewHead(currentVersion);
+			}
+		}
+		
+		// link next link to previews link
+		next.previewsLink = prev;
+		
+		// link previews link to next link (set new route)
+		prev.nextLink = next;
+		
+		if(previewsOfPreviews != null)
+		{
+			// set new route, if previews creates a new version
+			previewsOfPreviews.nextLink = prev;
+		}
+		
+		currentVersion.addModifiedLink(linkage.head);
+		
+		linkBegin.decrementSize();
+		linkEnd.decrementSize();
+		
+		if(linkage == defaultChainLinkage)
+		{
+			defaultChainLinkage = null;
+		}
+		else if(additionalLinkages !=  null)
+		{
+			additionalLinkages.remove(linkage.chainName);
 		}
 		
 		return true;

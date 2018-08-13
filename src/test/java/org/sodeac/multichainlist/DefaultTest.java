@@ -37,8 +37,16 @@ public class DefaultTest
 		content.add("3");
 		Node<String>[] nodes = multiChainList.append(content, null);
 		
+		Partition<String> partition = multiChainList.getPartition(null);
+		
+		assertEquals("chain size should be correct ", content.size(), partition.getSize(null));
+		assertEquals("chain first element should be correct ", "1", partition.getFirstElement(null));
+		
 		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
 		assertNotNull("snapshot should not be null", snapshot1);
+		assertEquals("snapshot first element should be correct ", "1", snapshot1.getFirstElement());
+		assertEquals("snapshot first link should be correct ", "1", snapshot1.getFirstLink().getElement());
+		
 		assertEquals("snapshot.size() should be correct ", content.size(), snapshot1.size());
 		int index = 0;
 		for(String str : snapshot1)
@@ -53,7 +61,7 @@ public class DefaultTest
 			Linkage<String> link =  item.getLink(null);
 			assertNotNull("link should not be null", link);
 			
-			Partition<String> partition = link.partition;
+			partition = link.partition;
 			assertNotNull("partition should not be null", partition);
 			assertNull("partitionname should be correct",partition.getName());
 			
@@ -249,7 +257,7 @@ public class DefaultTest
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		
-		snapshot1.getLink("2").linkage.node.removeLink(null);
+		snapshot1.getLink("2").unlink();
 		
 		content1.remove("2");
 		

@@ -23,24 +23,45 @@ public class Link<E>
 		this.version = version;
 	}
 	
-	protected Linkage<E> linkage;
-	protected Node<E> node;
-	protected E element;
-	protected SnapshotVersion version;
+	protected volatile Linkage<E> linkage;
+	protected volatile Node<E> node;
+	protected volatile E element;
+	protected volatile SnapshotVersion version;
 	protected volatile Link<E> newerVersion;
 	protected volatile Link<E> olderVersion;
 	protected volatile Link<E> previewsLink;
 	protected volatile Link<E> nextLink;
 	
-	public Link<E> getNextLink()
-	{
-		return nextLink;
-	}
 	public E getElement()
 	{
 		return element;
 	}
 	
+	public Node<E> getNode()
+	{
+		return node;
+	}
+	
+	public String getChainName()
+	{
+		return linkage.chainName;
+	}
+	
+	public boolean unlink()
+	{
+		Linkage<E> linkage = this.linkage;
+		Node<E> node = this.node;
+		if(linkage == null)
+		{
+			return false;
+		}
+		if(node == null)
+		{
+			return false;
+		}
+		return node.unlink(linkage.chainName);
+	}
+
 	protected void clear()
 	{
 		this.linkage = null;

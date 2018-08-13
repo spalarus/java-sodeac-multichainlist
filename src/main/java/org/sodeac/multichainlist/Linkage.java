@@ -28,27 +28,7 @@ public class Linkage<E>
 	protected Partition<E> partition;
 	protected Link<E> head;
 	
-	protected Link<E> createNewVersion(SnapshotVersion currentVersion)
-	{
-		Link<E> newVersion = new Link<>(this, this.head.node, this.head.element, currentVersion);
-		newVersion.olderVersion = this.head;
-		this.head.newerVersion = newVersion;
-		
-		if(this.head.nextLink != null)
-		{
-			this.head.nextLink.previewsLink = newVersion;
-		}
-		if(this.head.previewsLink != null)
-		{
-			this.head.previewsLink.nextLink = newVersion;
-		}
-		
-		currentVersion.addModifiedLink(this.head);
-		this.head = newVersion;
-		return newVersion;
-	}
-	
-	protected Link<E> createNewVersion2(SnapshotVersion currentVersion)
+	protected Link<E> createNewHead(SnapshotVersion currentVersion)
 	{
 		currentVersion.addModifiedLink(this.head);
 		Link<E> newVersion = new Link<>(this, this.head.node, this.head.element, currentVersion);
