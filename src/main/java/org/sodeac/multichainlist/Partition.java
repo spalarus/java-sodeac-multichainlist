@@ -10,6 +10,11 @@
  *******************************************************************************/
 package org.sodeac.multichainlist;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -167,6 +172,8 @@ public class Partition<E>
 		ChainEndpointLinkage<E> linkEnd;
 		Linkage<E> link;
 		
+		
+		
 		for(String chainName : chains)
 		{
 			linkBegin = chainBegin.getLink(chainName);
@@ -192,32 +199,30 @@ public class Partition<E>
 			Link<E> next = linkEnd.head;
 			
 			link = node.createLink(chainName, this, currentVersion);
-			
+
 			Link<E> previewsOfPreviews = null;
-			if((prev.version != currentVersion) || (next.version != currentVersion))
+			if((prev.version != currentVersion) && (prev.linkage != linkBegin))
 			{
-				if(next.version.getSequence() < currentVersion.getSequence())
+				if(prev.version.getSequence() < currentVersion.getSequence()) // was, wenn keine Snapshots?
 				{
-					next = next.linkage.createNewHead(currentVersion);
-				}
-				
-				if(prev.version.getSequence() < currentVersion.getSequence())
-				{
-					previewsOfPreviews = prev.previewsLink;
-					prev = prev.linkage.createNewHead(currentVersion);
+					if(! multiChainList.openSnapshotVersionList.isEmpty())
+					{
+						previewsOfPreviews = prev.previewsLink;
+						prev = prev.linkage.createNewHead(currentVersion);
+						prev.previewsLink = previewsOfPreviews;
+					}
 				}
 			}
 			
 			// link new link with endlink
-			next.previewsLink = link.head;
-			link.head.nextLink = next;
+			linkEnd.head.previewsLink = link.head;
+			link.head.nextLink = linkEnd.head;
 			
 			// link new link with previews link
 			link.head.previewsLink = prev;
 			
 			// set new route
 			prev.nextLink = link.head;
-			
 			
 			if(previewsOfPreviews != null)
 			{
@@ -272,7 +277,7 @@ public class Partition<E>
 	
 	protected Snapshot<E> createSnapshot(String chainName, SnapshotVersion currentVersion)
 	{
-		multiChainList.getReadLock().lock();
+		multiChainList.writeLock.lock();
 		try
 		{
 			Snapshot<E> snapshot = new Snapshot<>(currentVersion, chainName, this, this.multiChainList);
@@ -281,7 +286,7 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.getReadLock().unlock();
+			multiChainList.writeLock.unlock();
 		}
 	}
 	
@@ -320,7 +325,7 @@ public class Partition<E>
 
 	protected static class ChainEndpointLinkage<E> extends Linkage<E>
 	{
-
+		//protected Set<SnapshotVersion> modifiedByVersions = null;
 		protected ChainEndpointLinkage(Node<E> parent, String chainName, Partition<E> partition,SnapshotVersion currentVersion)
 		{
 			super(parent, chainName, partition, currentVersion);
@@ -347,6 +352,29 @@ public class Partition<E>
 		{
 			return --size;
 		}
+		
+		/*protected void modifiedByVersion(SnapshotVersion version)
+		{
+			if(modifiedByVersions == null)
+			{
+				modifiedByVersions = new HashSet<SnapshotVersion>();
+			}
+			modifiedByVersions.add(version);
+		}*/
+		
+		/*protected boolean versionRemoved(SnapshotVersion version)
+		{
+			if(modifiedByVersions == null)
+			{
+				return true;
+			}
+			modifiedByVersions.remove(version);
+			
+			if(modifiedByVersions.isEmpty())
+			{
+				clean();
+			}
+		}*/
 
 		@Override
 		public String toString()
@@ -354,7 +382,56 @@ public class Partition<E>
 			return super.toString() + " size " + size;
 		}
 		
+		protected void cleanObsolete()
+		{
+			LinkedList<Link<E>> todoList = new LinkedList<Link<E>>(); // TODO Cache
+			
+			if(super.head.olderVersion != null)
+			{
+				todoList.add(super.head.olderVersion);
+				super.head.olderVersion = null;
+			}
+			
+			if((super.head.nextLink != null) && (!(super.head.nextLink.linkage instanceof ChainEndpointLinkage)))
+			{
+				todoList.add(super.head.nextLink);
+			}
+			
+			while(! todoList.isEmpty())
+			{
+				Link<E> link = todoList.removeFirst();
+				if(link.olderVersion != null)
+				{
+					todoList.addLast(link.olderVersion);
+				}
+				if(link.nextLink != null)
+				{
+					if(!(link.nextLink.linkage instanceof ChainEndpointLinkage))
+					{
+						todoList.add(link.nextLink);
+					}
+				}
+				if(link.obsolete)
+				{
+					if(link.linkage != null)
+					{
+						if(link.olderVersion != null)
+						{
+							link.olderVersion.newerVersion = link.newerVersion;
+						}
+						if(link.newerVersion != null)
+						{
+							link.newerVersion.newerVersion = link.olderVersion;
+						}
+						link.clear();
+					}
+				}
+				
+			}
+		}
 	}
+	
+	
 	@Override
 	public int hashCode()
 	{
@@ -376,4 +453,151 @@ public class Partition<E>
 	{
 		return "partition " + this.name;
 	}	
+	
+	public String getListInfo(String chainName)
+	{
+		multiChainList.writeLock.lock();
+		try
+		{
+			StringBuilder builder = new StringBuilder();
+			ChainEndpointLinkage<E> chainEndpointLinkage = getChainBegin().getLink(chainName);
+			if(chainEndpointLinkage == null)
+			{
+				builder.append("Chain " + chainName + " not found");
+				return builder.toString();
+			}
+			
+			LinkedList<Link<E>> todoList = new LinkedList<Link<E>>();
+			Set<Link<E>> handled = new HashSet<Link<E>>();
+			
+			
+			
+			if((chainEndpointLinkage.head.nextLink != null))
+			{
+				
+				
+				if(!(chainEndpointLinkage.head.nextLink.linkage instanceof ChainEndpointLinkage))
+				{
+					builder.append("ChainBegin-HEAD(" + Integer.toHexString(chainEndpointLinkage.head.hashCode())+ ").nextLink / open versions: ( ");
+				}
+				else
+				{
+					builder.append("ChainBegin-HEAD(" + Integer.toHexString(chainEndpointLinkage.head.hashCode())+ ").nextLink links endPoint open versions: ( ");
+				}
+			}
+			
+			if(multiChainList.openSnapshotVersionList != null)
+			{
+				for(SnapshotVersion version : multiChainList.openSnapshotVersionList)
+				{
+					builder.append(version.getSequence() + " ");
+				}
+			}
+			
+			builder.append(")\n");
+			
+			Link<E> olderBegin = chainEndpointLinkage.head;
+			while(olderBegin.olderVersion != null)
+			{
+				olderBegin = olderBegin.olderVersion;
+				builder.append("Older ChainBegin " + Integer.toHexString(olderBegin.hashCode()) + "\n");
+				if(! handled.contains(olderBegin))
+				{
+					todoList.add(olderBegin);
+					handled.add(olderBegin);
+				}
+				if((olderBegin.nextLink != null) && (!(olderBegin.nextLink.linkage instanceof ChainEndpointLinkage)))
+				{
+					builder.append("\tOlder ChainBegin.nextLink " + Integer.toHexString(olderBegin.nextLink.hashCode()) + "\n");
+					if(! handled.contains(olderBegin.nextLink))
+					{
+						todoList.add(olderBegin.nextLink);
+						handled.add(olderBegin.nextLink);
+					}
+					
+				}
+			}
+			
+			if((chainEndpointLinkage.head.nextLink != null))
+			{
+				if(!(chainEndpointLinkage.head.nextLink.linkage instanceof ChainEndpointLinkage))
+				{
+					if(! handled.contains(chainEndpointLinkage.head.nextLink))
+					{
+						todoList.add(chainEndpointLinkage.head.nextLink);
+						handled.add(chainEndpointLinkage.head.nextLink);
+					}
+				}
+			}
+			
+			
+			while(! todoList.isEmpty())
+			{
+				Link<E> link = todoList.removeFirst();
+				boolean isCleared = link.linkage == null;
+				boolean isEndpoint = link.linkage instanceof ChainEndpointLinkage;
+				
+				builder.append("Analyse Link " + Integer.toHexString(link.hashCode()) + " - obsolete: " +  link.obsolete + " - cleared " + isCleared + " - endpoint: " + isEndpoint + " - value: " + link.getElement() + "\n");
+				if(link.olderVersion != null)
+				{
+					if(! handled.contains(link.olderVersion))
+					{
+						todoList.addLast(link.olderVersion);
+						handled.add(olderBegin.nextLink);
+					}
+					builder.append("\tolder version: " + Integer.toHexString(link.olderVersion.hashCode()) + "\n");
+				}
+				if(link.newerVersion != null)
+				{
+					if(! handled.contains(link.newerVersion))
+					{
+						todoList.addLast(link.newerVersion);
+						handled.add(link.newerVersion);
+					}
+					builder.append("\tnewer version: " + Integer.toHexString(link.newerVersion.hashCode()) + "\n");
+				}
+				if(link.nextLink != null)
+				{
+					if(!(link.nextLink.linkage instanceof ChainEndpointLinkage))
+					{
+						builder.append("\tnext: " + Integer.toHexString(link.nextLink.hashCode()) + "\n");
+						if(! handled.contains(link.nextLink))
+						{
+							todoList.addLast(link.nextLink);
+							handled.add(link.nextLink);
+						}
+					}
+					else
+					{
+						builder.append("\tnext: links endpoint\n");
+					}
+					
+				}
+				if(link.previewsLink != null)
+				{
+					if(!(link.previewsLink.linkage instanceof ChainEndpointLinkage))
+					{
+						builder.append("\tprev: " + Integer.toHexString(link.previewsLink.hashCode()) + "\n");
+						if(! handled.contains(link.previewsLink))
+						{
+							todoList.addLast(link.previewsLink);
+							handled.add(link.previewsLink);
+						}
+					}
+					else
+					{
+						builder.append("\tprev: links startpoint\n");
+					}
+					
+					
+				}
+			}
+			
+			return builder.toString();
+		}
+		finally 
+		{
+			multiChainList.writeLock.unlock();
+		}
+	}
 }

@@ -23,6 +23,7 @@ public class Link<E>
 		this.version = version;
 	}
 	
+	protected volatile boolean obsolete = false;
 	protected volatile Linkage<E> linkage;
 	protected volatile Node<E> node;
 	protected volatile E element;

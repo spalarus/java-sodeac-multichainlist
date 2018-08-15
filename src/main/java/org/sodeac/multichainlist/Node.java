@@ -17,6 +17,7 @@ import java.util.Map.Entry;
 
 import javax.naming.OperationNotSupportedException;
 
+import org.sodeac.multichainlist.MultiChainList.ChainsByPartition;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
 
@@ -115,37 +116,15 @@ public class Node<E>
 		multiChainList.getWriteLock().lock();
 		try
 		{
-			Partition<E> partition = null;
 			SnapshotVersion currentVersion = multiChainList.getModificationVersion();
-			for(Entry<String,Set<String>> entry : multiChainList.refactorLinkageDefintions(linkageDefinitions).entrySet())
+			for(ChainsByPartition chainsByPartition : multiChainList.refactorLinkageDefintions(linkageDefinitions).values())
 			{
-				if(partition == null)
-				{
-					partition = multiChainList.partitionList.get(entry.getKey());
-				}
-				else
-				{
-					if(entry.getKey() == null)
-					{
-						if(partition.getName() != null)
-						{
-							partition = multiChainList.partitionList.get(entry.getKey());
-						}
-					}
-					else
-					{
-						if(! entry.getKey().equals(partition.getName()))
-						{
-							partition = multiChainList.partitionList.get(entry.getKey());
-						}
-					}
-				}
-				partition.appendNode(this, entry.getValue(), currentVersion);
+				chainsByPartition.partition.appendNode(this, chainsByPartition.chains, currentVersion);
 			}
 		}
 		finally 
 		{
-			multiChainList.clearRefacotrLinkageDefinition();
+			multiChainList.clearRefactorLinkageDefinition();
 			multiChainList.getWriteLock().unlock();
 		}
 	}
@@ -210,26 +189,44 @@ public class Node<E>
 		{
 			return false;
 		}
+		
 		Partition<E> partition = linkage.partition;
 		SnapshotVersion currentVersion = partition.multiChainList.getModificationVersion();
 		ChainEndpointLinkage<E> linkBegin = partition.getChainBegin().getLink(linkage.chainName);
 		ChainEndpointLinkage<E> linkEnd = partition.getChainEnd().getLink(linkage.chainName);
-			
+		boolean createNewVersion = false;
+		
 		Link<E> prev = linkage.head.previewsLink;
 		Link<E> next = linkage.head.nextLink;
-			
+		linkage.head.obsolete = true;
+		
+		Link<E> nextOfNext = null;
 		Link<E> previewsOfPreviews = null;
 		if((prev.version != currentVersion) || (next.version != currentVersion))
 		{
-				
-			if(next.version.getSequence() < currentVersion.getSequence())
+			if(next.linkage != linkEnd)
 			{
-				next = next.linkage.createNewHead(currentVersion);
+				if(next.version.getSequence() < currentVersion.getSequence())
+				{
+					if(! multiChainList.openSnapshotVersionList.isEmpty())
+					{
+						nextOfNext = next.nextLink;
+						next = next.linkage.createNewHead(currentVersion);
+						next.nextLink = nextOfNext;
+						nextOfNext.previewsLink = next;
+						createNewVersion = true;
+					}
+				}
 			}
 			if(prev.version.getSequence() < currentVersion.getSequence())
 			{
-				previewsOfPreviews = prev.previewsLink;
-				prev = prev.linkage.createNewHead(currentVersion);
+				if(! multiChainList.openSnapshotVersionList.isEmpty())
+				{
+					previewsOfPreviews = prev.previewsLink;
+					prev = prev.linkage.createNewHead(currentVersion);
+					prev.previewsLink = previewsOfPreviews;
+					createNewVersion = true;
+				}
 			}
 		}
 		
@@ -245,7 +242,14 @@ public class Node<E>
 			previewsOfPreviews.nextLink = prev;
 		}
 		
-		currentVersion.addModifiedLink(linkage.head);
+		if(createNewVersion || (linkage.head.olderVersion != null))
+		{
+			currentVersion.addModifiedLink(linkBegin);
+		}
+		else
+		{
+			linkage.head.clear();
+		}
 		
 		linkBegin.decrementSize();
 		linkEnd.decrementSize();
@@ -293,8 +297,9 @@ public class Node<E>
 			{
 				additionalLinkages = new HashMap<String,Linkage<E>>();
 			}
-			return additionalLinkages.put(chainName, link);
+			
 		}
+		additionalLinkages.put(chainName, link);
 		return additionalLinkages.get(chainName);
 	}
 	

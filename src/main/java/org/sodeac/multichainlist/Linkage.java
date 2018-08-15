@@ -11,6 +11,7 @@
 package org.sodeac.multichainlist;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
+import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
 
 public class Linkage<E>
 {
@@ -30,10 +31,13 @@ public class Linkage<E>
 	
 	protected Link<E> createNewHead(SnapshotVersion currentVersion)
 	{
-		currentVersion.addModifiedLink(this.head);
+		ChainEndpointLinkage<E> chainEndpointLinkage = partition.getChainBegin().getLink(this.chainName);
+		currentVersion.addModifiedLink(chainEndpointLinkage);
+		//chainEndpointLinkage.modifiedByVersion(currentVersion);
 		Link<E> newVersion = new Link<>(this, this.head.node, this.head.element, currentVersion);
 		newVersion.olderVersion = this.head;
 		this.head.newerVersion = newVersion;
+		this.head.obsolete = true;
 		this.head = newVersion;
 		return newVersion;
 	}

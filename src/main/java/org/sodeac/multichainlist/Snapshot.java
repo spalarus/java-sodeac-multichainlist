@@ -25,7 +25,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 	private Partition<E> partition;
 	private MultiChainList<E> parent;
 	private String chainName;
-	private Link<E> chainBeginVersion;
+	private Link<E> firstLink;
 	private volatile boolean closed;
 	private long size;
 	
@@ -38,16 +38,16 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		this.partition = partition;
 		this.parent = parent;
 		this.chainName = chainName;
-		ChainEndpointLinkage<E> beginLink = this.partition.getChainBegin().getLink(this.chainName);
-		if(beginLink == null)
+		ChainEndpointLinkage<E> beginLinkage = this.partition.getChainBegin().getLink(this.chainName);
+		if(beginLinkage == null)
 		{
-			chainBeginVersion = null;
+			firstLink = null;
 			size = 0;
 		}
 		else
 		{
-			chainBeginVersion = beginLink.head;
-			this.size = beginLink.getSize();
+			firstLink = beginLinkage.head.nextLink;
+			this.size = beginLinkage.getSize();
 		}
 	}
 
@@ -242,26 +242,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 			throw new RuntimeException("snapshot is closed");
 		}
 		
-		if(this.chainBeginVersion == null)
-		{
-			return null;
-		}
-		
-		Link<E> next = this.chainBeginVersion.nextLink;
-		if(next == null)
-		{
-			return null;
-		}
-		
-		if(next.version.getSequence() > Snapshot.this.version.getSequence())
-		{
-			throw new RuntimeException("intern link error: mission link with version " + Snapshot.this.version.getSequence() );
-		}
-		if(!  next.node.isPayload())
-		{
-			return null;
-		}
-		return next;
+		return this.firstLink;
 	}
 	
 	private class LinkVersionSnapshotIterator extends SnapshotIterator implements Iterator<Link<E>>
@@ -329,14 +310,8 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		private SnapshotIterator()
 		{
 			super();
-			if(Snapshot.this.chainBeginVersion == null)
-			{
-				this.previews = null;
-			}
-			else
-			{
-				this.previews = Snapshot.this.chainBeginVersion;
-			}
+			this.next = Snapshot.this.firstLink;
+			nextCalculated = true;
 		}
 		
 		public boolean hasNext()
@@ -347,6 +322,13 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 			}
 			
 			nextCalculated = true;
+			
+			if(Snapshot.this.size == 0L)
+			{
+				this.next = null;
+				return false;
+			}
+			
 			if(next != null)
 			{
 				return true;
@@ -364,13 +346,31 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 				return false;
 			}
 			
-			while(this.next.version.getSequence() > Snapshot.this.version.getSequence())
+			if(this.next.version.getSequence() > Snapshot.this.version.getSequence())
 			{
-				this.next = this.next.olderVersion;
-				if(this.next == null)
+				while(this.next.version.getSequence() > Snapshot.this.version.getSequence())
 				{
-					this.previews = null;
-					throw new RuntimeException("mission link with version " + Snapshot.this.version.getSequence() );
+					this.next = this.next.olderVersion;
+					if(this.next == null)
+					{
+						this.previews = null;
+						throw new RuntimeException("mission link with version " + Snapshot.this.version.getSequence() );
+					}
+				}
+			}
+			else if(this.next.version.getSequence() < Snapshot.this.version.getSequence())
+			{
+				while(this.next.newerVersion != null)
+				{
+					if(this.next.newerVersion.version == null)
+					{
+						break;
+					}
+					if(this.next.newerVersion.version.getSequence() >  Snapshot.this.version.getSequence())
+					{
+						break;
+					}
+					this.next = this.next.newerVersion;
 				}
 			}
 			if(!  this.next.node.isPayload())
