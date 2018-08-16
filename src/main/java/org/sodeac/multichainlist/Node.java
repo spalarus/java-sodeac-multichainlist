@@ -15,8 +15,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import javax.naming.OperationNotSupportedException;
-
 import org.sodeac.multichainlist.MultiChainList.ChainsByPartition;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
@@ -39,7 +37,7 @@ public class Node<E>
 	{
 		if(! isPayload())
 		{
-			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
 		
 		LinkageDefinition<E>[] definitionList = null;
@@ -73,7 +71,7 @@ public class Node<E>
 	{
 		if(! isPayload())
 		{
-			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
 		
 		multiChainList.readLock.lock();
@@ -103,7 +101,7 @@ public class Node<E>
 	{
 		if(! isPayload())
 		{
-			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
 		if(linkageDefinitions == null)
 		{
@@ -133,7 +131,7 @@ public class Node<E>
 	{
 		if(! isPayload())
 		{
-			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
 		multiChainList.getWriteLock().lock();
 		try
@@ -160,7 +158,7 @@ public class Node<E>
 	{
 		if(! isPayload())
 		{
-			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
 		multiChainList.getWriteLock().lock();
 		try
@@ -183,7 +181,7 @@ public class Node<E>
 	{
 		if(! isPayload())
 		{
-			throw new RuntimeException(new OperationNotSupportedException("node is not payload"));
+			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
 		if(linkage == null)
 		{
