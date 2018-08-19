@@ -49,7 +49,7 @@ public class MultiChainList<E>
 	
 	protected HashMap<String, Partition<E>>  partitionList = null;
 	private volatile List<String> partitionNameList = null;
-	private SnapshotVersion modificationVersion = null;
+	protected SnapshotVersion modificationVersion = null;
 	protected SnapshotVersion snapshotVersion = null;
 	protected Set<SnapshotVersion> openSnapshotVersionList = new HashSet<SnapshotVersion>();
 	protected Set<ChainEndpointLinkage<E>> waitForClean = null;
@@ -197,6 +197,19 @@ public class MultiChainList<E>
 		return node;
 	}
 	
+	public int getPartitionSize()
+	{
+		readLock.lock();
+		try
+		{
+			return this.partitionList.size();
+		}
+		finally
+		{
+			readLock.lock();
+		}
+	}
+	
 	public List<String> getPartitionNameList()
 	{
 		List<String> partitionList = this.partitionNameList;
@@ -204,7 +217,7 @@ public class MultiChainList<E>
 		{
 			return partitionList;
 		}
-		writeLock.lock();
+		readLock.lock();
 		try
 		{
 			if(this.partitionNameList != null)
@@ -221,7 +234,28 @@ public class MultiChainList<E>
 		}
 		finally
 		{
-			writeLock.lock();
+			readLock.lock();
+		}
+	}
+	
+	public List<Partition<E>> getPartitionList()
+	{
+		readLock.lock();
+		try
+		{
+			List<Partition<E>> list = new ArrayList<>(this.partitionList.size());
+			Partition<E> partition = firstPartition;
+			list.add(partition);
+			while(partition.next != null)
+			{
+				partition = partition.next;
+				list.add(partition);
+			}
+			return list;
+		}
+		finally
+		{
+			readLock.lock();
 		}
 	}
 	

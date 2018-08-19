@@ -275,6 +275,32 @@ public class Partition<E>
 		}
 	}
 	
+	public E getLastElement(String chainName)
+	{
+		multiChainList.getReadLock().lock();
+		try
+		{
+			ChainEndpointLinkage<E> endpointLinkage = chainEnd.getLink(chainName);
+			if(endpointLinkage == null)
+			{
+				throw new NoSuchElementException();
+			}
+			if(endpointLinkage.head == null)
+			{
+				throw new NoSuchElementException();
+			}
+			if(endpointLinkage.head.nextLink == null)
+			{
+				throw new NoSuchElementException();
+			}
+			return endpointLinkage.head.nextLink.element;
+		}
+		finally 
+		{
+			multiChainList.getReadLock().unlock();
+		}
+	}
+	
 	protected Snapshot<E> createSnapshot(String chainName, SnapshotVersion currentVersion)
 	{
 		multiChainList.writeLock.lock();

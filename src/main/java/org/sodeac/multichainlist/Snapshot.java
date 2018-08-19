@@ -20,14 +20,15 @@ import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
 
 public class Snapshot<E> implements AutoCloseable, Collection<E>
 {
-	private UUID uuid;
-	private SnapshotVersion version;
+	protected UUID uuid;
+	protected SnapshotVersion version;
 	private Partition<E> partition;
-	private MultiChainList<E> parent;
+	protected MultiChainList<E> parent;
 	private String chainName;
-	private Link<E> firstLink;
-	private volatile boolean closed;
-	private long size;
+	protected Link<E> firstLink;
+	protected Link<E> lastLink;
+	protected volatile boolean closed;
+	protected long size;
 	
 	protected Snapshot(SnapshotVersion version, String chainName, Partition<E> partition,MultiChainList<E> parent)
 	{
@@ -49,6 +50,17 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 			firstLink = beginLinkage.head.nextLink;
 			this.size = beginLinkage.getSize();
 		}
+		ChainEndpointLinkage<E> endLinkage = this.partition.getChainEnd().getLink(this.chainName) ; 
+		lastLink = endLinkage == null ? null : endLinkage.head.previewsLink;
+	}
+	
+	protected Snapshot(MultiChainList<E> parent)
+	{
+		super();
+		this.uuid = UUID.randomUUID();
+		this.closed = false;
+		this.parent = parent;
+		this.size = 0L;
 	}
 
 	protected MultiChainList<E> getParent()
@@ -163,6 +175,20 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 	@Override
 	public <T> T[] toArray(T[] a)
 	{
+		if (a.length < size())
+		{
+			a = (T[]) new Object[size()];
+		}
+		int index = 0;
+		for(E element : this)
+		{
+			a[index] = (T)element;
+			index++;
+		}
+		if (a.length > size())
+		{
+			a[size()] = null;
+		}
 		return (T[])toArray();
 	}
 
@@ -241,8 +267,26 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		{
 			throw new RuntimeException("snapshot is closed");
 		}
-		
 		return this.firstLink;
+	}
+	
+	public E getLastElement()
+	{
+		Link<E> lastLink = getLastLink();
+		if(lastLink == null)
+		{
+			throw new NoSuchElementException();
+		}
+		return lastLink.element;
+	}
+
+	public Link<E> getLastLink()
+	{
+		if(this.closed)
+		{
+			throw new RuntimeException("snapshot is closed");
+		}
+		return this.lastLink;
 	}
 	
 	private class LinkVersionSnapshotIterator extends SnapshotIterator implements Iterator<Link<E>>
@@ -251,20 +295,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		@Override
 		public Link<E> next()
 		{
-			if(Snapshot.this.closed)
-			{
-				throw new RuntimeException("snapshot is closed");
-			}
-			try
-			{
-				return super.next;
-			}
-			finally 
-			{
-				super.previews = super.next;
-				super.next = null;
-				super.nextCalculated = false;
-			}
+			return super.nextLink();
 		}
 	}
 	
@@ -273,31 +304,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		@Override
 		public E next()
 		{
-			if(Snapshot.this.closed)
-			{
-				throw new RuntimeException("snapshot is closed");
-			}
-			try
-			{
-				if(! super.nextCalculated)
-				{
-					if(! super.hasNext())
-					{
-						throw new NoSuchElementException();
-					}
-				}
-				if(super.next == null)
-				{
-					throw new NoSuchElementException();
-				}
-				return super.next.getElement();
-			}
-			finally 
-			{
-				super.previews = super.next;
-				super.next = null;
-				super.nextCalculated = false;
-			}
+			return super.nextLink().element;
 		}
 	}
 	
@@ -380,6 +387,35 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 				return false;
 			}
 			return true;
+		}
+		
+		private Link<E> nextLink()
+		{
+			if(Snapshot.this.closed)
+			{
+				throw new RuntimeException("snapshot is closed");
+			}
+			try
+			{
+				if(! this.nextCalculated)
+				{
+					if(! this.hasNext())
+					{
+						throw new NoSuchElementException();
+					}
+				}
+				if(this.next == null)
+				{
+					throw new NoSuchElementException();
+				}
+				return this.next;
+			}
+			finally 
+			{
+				this.previews = this.next;
+				this.next = null;
+				this.nextCalculated = false;
+			}
 		}
 		
 	}
