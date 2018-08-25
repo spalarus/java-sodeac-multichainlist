@@ -439,7 +439,7 @@ public class Partition<E>
 				}
 				if(link.obsolete)
 				{
-					if(link.linkage != null)
+					if(link.node != null)
 					{
 						if(link.olderVersion != null)
 						{

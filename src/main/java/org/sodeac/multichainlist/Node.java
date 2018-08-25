@@ -10,7 +10,9 @@
  *******************************************************************************/
 package org.sodeac.multichainlist;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -97,7 +99,27 @@ public class Node<E>
 		
 	}
 	
+	@SuppressWarnings("unchecked")
+	public final void link(String chainName,Partition<E> partition)
+	{
+		link( (LinkageDefinition<E>[])new LinkageDefinition<?>[] {new LinkageDefinition<E>(chainName, partition)});
+	}
+	
 	public final void link(LinkageDefinition<E>[] linkageDefinitions)
+	{
+		if(linkageDefinitions == null)
+		{
+			return;
+		}
+		if(linkageDefinitions.length == 0)
+		{
+			return;
+		}
+		
+		link(Arrays.asList(linkageDefinitions));
+	}
+	
+	public final void link(List<LinkageDefinition<E>> linkageDefinitions)
 	{
 		if(! isPayload())
 		{
@@ -107,7 +129,7 @@ public class Node<E>
 		{
 			return;
 		}
-		if(linkageDefinitions.length == 0)
+		if(linkageDefinitions.size() == 0)
 		{
 			return;
 		}

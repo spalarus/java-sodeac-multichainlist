@@ -23,7 +23,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 
 		System.out.println("Insert Element '1'");
 		
-		Node<String> node1 = mcl.append("1", null);
+		Node<String> node1 = mcl.append("1");
 		Partition<String> partition = mcl.getPartition(null);
 		ChainEndpointLinkage<String> begin = partition.chainBegin.getLink(null);
 		ChainEndpointLinkage<String> end = partition.chainEnd.getLink(null);
@@ -131,7 +131,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 
 		System.out.println("Insert Element '1'");
 		
-		Node<String> node1 = mcl.append("1", null);
+		Node<String> node1 = mcl.append("1");
 		Partition<String> partition = mcl.getPartition(null);
 		ChainEndpointLinkage<String> begin = partition.chainBegin.getLink(null);
 		ChainEndpointLinkage<String> end = partition.chainEnd.getLink(null);
@@ -336,7 +336,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 
 		System.out.println("Insert Element '1'");
 		
-		Node<String> node1 = mcl.append("1", null);
+		Node<String> node1 = mcl.append("1");
 		Partition<String> partition = mcl.getPartition(null);
 		ChainEndpointLinkage<String> begin = partition.chainBegin.getLink(null);
 		ChainEndpointLinkage<String> end = partition.chainEnd.getLink(null);

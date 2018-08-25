@@ -96,7 +96,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 	{
 		for(Link<E> element : this.linkIterable())
 		{
-			if(element.linkage.node.getElement() == o)
+			if(element.node.getElement() == o)
 			{
 				return element;
 			}

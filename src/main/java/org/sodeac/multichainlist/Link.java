@@ -43,11 +43,6 @@ public class Link<E>
 		return node;
 	}
 	
-	public String getChainName()
-	{
-		return linkage.chainName;
-	}
-	
 	public boolean unlink()
 	{
 		Linkage<E> linkage = this.linkage;
@@ -79,11 +74,9 @@ public class Link<E>
 	public String toString()
 	{
 		return
-		linkage == null ? "lVersion cleared away" : 
+		node == null ? "link-version cleared away" : 
 		(
 			"lVersion " + this.version.getSequence() 
-				+ " chain: " + linkage.chainName 
-				+ " partition: " + ( linkage.partition == null ? "null"  : linkage.partition.getName()) 
 				+ " hasNewer: " + (newerVersion != null) 
 				+ " hasOlder: " + (olderVersion != null)
 		);

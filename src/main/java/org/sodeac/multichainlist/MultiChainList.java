@@ -11,6 +11,7 @@
 package org.sodeac.multichainlist;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -58,7 +59,7 @@ public class MultiChainList<E>
 	
 	private Map<String,ChainsByPartition> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition>();
 	private LinkedList<ChainsByPartition> _cachedChainsByPartition = new LinkedList<ChainsByPartition>();
-	
+	private LinkedList<Link<E>> _obsoleteLinkList = null;
 	public static final LinkageDefinition<?> DEFAULT_CHAIN_SETTING =  new LinkageDefinition<>(null, null);
 	public static final LinkageDefinition<?>[] DEFAULT_CHAIN_SETTINGS = new LinkageDefinition[] {DEFAULT_CHAIN_SETTING};
 	
@@ -124,8 +125,24 @@ public class MultiChainList<E>
 		
 	}*/
 	
+	
+	public Node<E>[] append(Collection<E> elements)
+	{
+		return append(elements, Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+	}
+	
+	public Node<E>[] append(Collection<E> elements, LinkageDefinition<?>... linkageDefinitions)
+	{
+		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		{
+			return append(elements, Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+		}
+		return append(elements, Arrays.asList((LinkageDefinition<E>[])linkageDefinitions));
+		
+	}
+	
 	@SuppressWarnings("unchecked")
-	public Node<E>[] append(Collection<E> elements, LinkageDefinition<E>[] linkageDefinitions)
+	public Node<E>[] append(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
 	{
 		if(elements == null)
 		{
@@ -134,9 +151,9 @@ public class MultiChainList<E>
 		
 		Node<E>[] nodes = new Node[elements.size()];
 		
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
 		{
-			linkageDefinitions = (LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS;
+			linkageDefinitions = Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS);
 		}
 		
 		writeLock.lock();
@@ -166,14 +183,27 @@ public class MultiChainList<E>
 		return nodes;
 	}
 	
+	public Node<E> append(E element)
+	{
+		return append(element, Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+	}
+	
+	public Node<E> append(E element, LinkageDefinition<?>... linkageDefinitions)
+	{
+		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		{
+			return append(element, Arrays.asList( (LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+		}
+		return append(element, Arrays.asList((LinkageDefinition<E>[])linkageDefinitions));	
+	}
 	@SuppressWarnings("unchecked")
-	public Node<E> append(E element, LinkageDefinition<E>[] linkageDefinitions)
+	public Node<E> append(E element, List<LinkageDefinition<E>> linkageDefinitionList)
 	{
 		Node<E> node = null;
 		
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		if((linkageDefinitionList == null) || (linkageDefinitionList.size() == 0))
 		{
-			linkageDefinitions = (LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS;
+			linkageDefinitionList = Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS);
 		}
 		
 		writeLock.lock();
@@ -181,10 +211,10 @@ public class MultiChainList<E>
 		{
 			getModificationVersion();
 			
-			refactorLinkageDefintions(linkageDefinitions);
+			refactorLinkageDefintions(linkageDefinitionList);
 			
 			node = new Node<E>(element,this);
-			for(ChainsByPartition chainsByPartition : refactorLinkageDefintions(linkageDefinitions).values())
+			for(ChainsByPartition chainsByPartition : refactorLinkageDefintions(linkageDefinitionList).values())
 			{
 				chainsByPartition.partition.appendNode(node, chainsByPartition.chains, modificationVersion);
 			}
@@ -206,7 +236,7 @@ public class MultiChainList<E>
 		}
 		finally
 		{
-			readLock.lock();
+			readLock.unlock();
 		}
 	}
 	
@@ -234,7 +264,7 @@ public class MultiChainList<E>
 		}
 		finally
 		{
-			readLock.lock();
+			readLock.unlock();
 		}
 	}
 	
@@ -255,7 +285,7 @@ public class MultiChainList<E>
 		}
 		finally
 		{
-			readLock.lock();
+			readLock.unlock();
 		}
 	}
 	
@@ -308,15 +338,22 @@ public class MultiChainList<E>
 			{
 				return snapshot;
 			}
-				
-			LinkedList<Link<E>> obsoleteLinkList = new LinkedList<Link<E>>(); // TODO cache
-			obsoleteLinkList.add(beginLinkage.head.olderVersion.nextLink);
-			Link<E> obsoleteLink;
-			while(! obsoleteLinkList.isEmpty())
+			
+			if(_obsoleteLinkList == null)
 			{
-				obsoleteLink = obsoleteLinkList.removeFirst();
+				_obsoleteLinkList = new LinkedList<Link<E>>();
+			}
+			else
+			{
+				_obsoleteLinkList.clear();
+			}
+			_obsoleteLinkList.add(beginLinkage.head.olderVersion.nextLink);
+			Link<E> obsoleteLink;
+			while(! _obsoleteLinkList.isEmpty())
+			{
+				obsoleteLink = _obsoleteLinkList.removeFirst();
 				
-				if(obsoleteLink.linkage == null)
+				if(obsoleteLink.node == null)
 				{
 					continue;
 				}
@@ -327,14 +364,16 @@ public class MultiChainList<E>
 				obsoleteLink.obsolete = true;
 				if(obsoleteLink.nextLink != null)
 				{
-					obsoleteLinkList.add(obsoleteLink.nextLink);
+					_obsoleteLinkList.add(obsoleteLink.nextLink);
 				}
 				if(obsoleteLink.newerVersion != null)
 				{
-					obsoleteLinkList.add(obsoleteLink.newerVersion);
+					_obsoleteLinkList.add(obsoleteLink.newerVersion);
 				}
 			}
-				
+			
+			_obsoleteLinkList.clear();
+			
 			return snapshot;
 		}
 		finally 
@@ -363,6 +402,16 @@ public class MultiChainList<E>
 		{
 			writeLock.unlock();
 		}
+	}
+	
+	public Chain<E> chain( String chainName)
+	{
+		return new Chain<E>(this, chainName, null);
+	}
+	
+	public Chain<E> chain( String chainName, Partition<?>... partitions)
+	{
+		return new Chain<E>(this, chainName, partitions);
 	}
 	
 	protected void removeSnapshotVersion(SnapshotVersion snapshotVersion)
@@ -475,7 +524,7 @@ public class MultiChainList<E>
 	/*
 	 * Must run in write lock !!!!
 	 */
-	protected Map<String,ChainsByPartition> refactorLinkageDefintions(LinkageDefinition<E>[] linkageDefinitions)
+	protected Map<String,ChainsByPartition> refactorLinkageDefintions(Collection<LinkageDefinition<E>> linkageDefinitions)
 	{
 		_cachedRefactoredLinkageDefinition.clear();
 		

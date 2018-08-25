@@ -22,10 +22,10 @@ public class Chain<E>
 {
 	private MultiChainList<E> multiChainList = null;
 	private String chainName = null;
-	private Partition<E>[] partitions = null;
-	private Partition<E>[] allPartitions = null;
+	private Partition<?>[] partitions = null;
+	private Partition<?>[] allPartitions = null;
 	
-	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<E>[] partitions)
+	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<?>[] partitions)
 	{
 		super();
 		this.multiChainList = multiChainList;
@@ -38,21 +38,26 @@ public class Chain<E>
 	{
 		if(this.partitions != null)
 		{
-			return partitions;
+			return (Partition<E>[])partitions;
 		}
 		
 		if((allPartitions == null) || (allPartitions.length != multiChainList.getPartitionSize()))
 		{
 			allPartitions = multiChainList.getPartitionList().toArray(new Partition[multiChainList.getPartitionSize()]);
 		}
-		return allPartitions;
+		return (Partition<E>[])allPartitions;
+	}
+	
+	public Snapshot<E> createSnapshot()
+	{
+		return new ChainSnapshot();
 	}
 	
 	private class ChainSnapshot extends Snapshot<E>
 	{
 		private List<Snapshot<E>> partitionSnapshots = null;
 		
-		private ChainSnapshot(SnapshotVersion version)
+		private ChainSnapshot()
 		{
 			super(multiChainList);
 			
@@ -66,8 +71,8 @@ public class Chain<E>
 				{
 					multiChainList.snapshotVersion = multiChainList.modificationVersion;
 					multiChainList.openSnapshotVersionList.add(multiChainList.snapshotVersion);
-					super.version = multiChainList.snapshotVersion;
 				}
+				super.version = multiChainList.snapshotVersion;
 				
 				for(int i = 0; i < partitions.length;  i++)
 				{
@@ -164,7 +169,7 @@ public class Chain<E>
 
 		private abstract class ChainSnapshotIterator
 		{
-			private int currentSnapshotIndex = 0; 
+			private int currentSnapshotIndex = 1; 
 			private Iterator<Link<E>> iterator = null;
 			private boolean nextCalculated = false;
 			
@@ -196,10 +201,10 @@ public class Chain<E>
 					return true;
 				}
 				
-				if(currentSnapshotIndex < ChainSnapshot.this.size)
+				if(currentSnapshotIndex < partitionSnapshots.size())
 				{
+					iterator = partitionSnapshots.get(currentSnapshotIndex).linkIterable().iterator();
 					currentSnapshotIndex++;
-					iterator = partitionSnapshots.get(0).linkIterable().iterator();
 					return iterator.hasNext();
 				}
 				else

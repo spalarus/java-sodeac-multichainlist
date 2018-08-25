@@ -35,7 +35,7 @@ public class DefaultTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		Node<String>[] nodes = multiChainList.append(content, null);
+		Node<String>[] nodes = multiChainList.append(content);
 		
 		Partition<String> partition = multiChainList.getPartition(null);
 		
@@ -211,7 +211,7 @@ public class DefaultTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		multiChainList.append(content, null);
+		multiChainList.append(content);
 		
 		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
 		assertEquals("snapshot.size() should be correct ", content.size(), snapshot1.size());
@@ -234,7 +234,7 @@ public class DefaultTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		multiChainList.append(content, null);
+		multiChainList.append(content);
 		
 		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
 		assertNotNull("snapshot should not be null", snapshot1);
@@ -264,7 +264,7 @@ public class DefaultTest
 		content2.add("5");
 		content2.add("6");
 		
-		multiChainList.append(content1, null);
+		multiChainList.append(content1);
 		
 		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
@@ -272,7 +272,7 @@ public class DefaultTest
 		
 		snapshot1.close();
 		
-		multiChainList.append(content2, null); // no opening snapshot => no snapshot version => does not create new modified version
+		multiChainList.append(content2); // no opening snapshot => no snapshot version => does not create new modified version
 		
 		Snapshot<String> snapshot2 = multiChainList.createSnapshot(null, null);
 		assertNotNull("snapshot should not be null", snapshot2);
@@ -298,13 +298,13 @@ public class DefaultTest
 		content2.add("5");contentX.add("5");
 		content2.add("6");contentX.add("6");
 		
-		Node<String>[] nodes1 = multiChainList.append(content1, null);
+		Node<String>[] nodes1 = multiChainList.append(content1);
 		
 		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		
-		Node<String>[] nodes2 = multiChainList.append(content2, null);
+		Node<String>[] nodes2 = multiChainList.append(content2);
 		
 		Snapshot<String> snapshot2 = multiChainList.createSnapshot(null, null);
 		assertNotNull("snapshot should not be null", snapshot2);
@@ -374,7 +374,7 @@ public class DefaultTest
 		content1.add("2");
 		content1.add("3");
 		
-		Node<String>[] nodes = multiChainList.append(content1, null);
+		Node<String>[] nodes = multiChainList.append(content1);
 
 		Node<String> node1 = nodes[0];
 		Node<String> node2 = nodes[1];
@@ -527,7 +527,7 @@ public class DefaultTest
 		List<String> content1 = new ArrayList<String>();
 		content1.add("1");
 		
-		multiChainList.append(content1, null);
+		multiChainList.append(content1);
 		Snapshot<String> snapshot2 = multiChainList.createSnapshot(null, null);
 		assertEquals("snapshot2 size should be correct",content1.size(), snapshot2.size());
 		
@@ -551,7 +551,7 @@ public class DefaultTest
 		List<String> content2 = new ArrayList<String>();
 		content2.add("2");
 		
-		multiChainList.append(content2, null);
+		multiChainList.append(content2);
 		content2 = new ArrayList<String>();
 		content2.add("1");
 		content2.add("2");
@@ -626,7 +626,7 @@ public class DefaultTest
 		List<String> content1 = new ArrayList<String>();
 		content1.add("1");
 		
-		multiChainList.append(content1, null);
+		multiChainList.append(content1);
 
 		
 		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
@@ -680,7 +680,7 @@ public class DefaultTest
 		List<String> content1 = new ArrayList<String>();
 		content1.add("1");
 		
-		multiChainList.append(content1, null);
+		multiChainList.append(content1);
 
 		
 		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
