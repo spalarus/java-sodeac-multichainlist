@@ -26,7 +26,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
+import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class MultiChainList<E>
 {
@@ -53,15 +53,18 @@ public class MultiChainList<E>
 	protected SnapshotVersion modificationVersion = null;
 	protected SnapshotVersion snapshotVersion = null;
 	protected Set<SnapshotVersion> openSnapshotVersionList = new HashSet<SnapshotVersion>();
-	protected Set<ChainEndpointLinkage<E>> waitForClean = null;
+	protected Set<ChainEndpointLink<E>> waitForClean = null;
 	private volatile Partition<E> firstPartition = null;
 	private volatile Partition<E> lastPartition = null;
 	
 	private Map<String,ChainsByPartition> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition>();
 	private LinkedList<ChainsByPartition> _cachedChainsByPartition = new LinkedList<ChainsByPartition>();
 	private LinkedList<Link<E>> _obsoleteLinkList = null;
+	
 	public static final LinkageDefinition<?> DEFAULT_CHAIN_SETTING =  new LinkageDefinition<>(null, null);
-	public static final LinkageDefinition<?>[] DEFAULT_CHAIN_SETTINGS = new LinkageDefinition[] {DEFAULT_CHAIN_SETTING};
+	@SuppressWarnings("unchecked")
+	public final LinkageDefinition<E>[] DEFAULT_CHAIN_SETTINGS = new LinkageDefinition[] {DEFAULT_CHAIN_SETTING};
+	public final List<LinkageDefinition<E>> DEFAULT_CHAIN_SETTING_LIST = Arrays.asList(DEFAULT_CHAIN_SETTINGS);
 	
 	private UUID uuid = null;
 	
@@ -82,60 +85,17 @@ public class MultiChainList<E>
 		return modificationVersion;
 	}
 	
-	/*public void clear()
-	{
-		writeLock.lock();
-		try
-		{
-			for(Partition<E> partition : this.partitionList.values())
-			{
-				boolean openSnapshots = this.openSnapshotVersionList.size() > 0;
-				partition.clearChain
-				(
-					(ChainEndpointLinkage<E>)partition.getChainBegin().defaultChainLink,
-					(ChainEndpointLinkage<E>)partition.getChainEnd().defaultChainLink, 
-					getModificationVersion(),
-					openSnapshots
-				);
-				if(partition.getChainBegin().links != null)
-				{
-					for(String chainName : partition.getChainBegin().links.keySet())
-					{
-						partition.clearChain
-						(
-							(ChainEndpointLinkage<E>)partition.getChainBegin().links.get(chainName),
-							(ChainEndpointLinkage<E>) partition.getChainEnd().links.get(chainName), 
-							getModificationVersion(),
-							openSnapshots
-						);
-					}
-				}
-				if(! openSnapshots)
-				{
-					this.modificationVersion = new SnapshotVersion<>(0L, this);
-					this.snapshotVersion = null;
-				}
-			}
-			
-		}
-		finally
-		{
-			writeLock.unlock();
-		}
-		
-	}*/
-	
-	
 	public Node<E>[] append(Collection<E> elements)
 	{
-		return append(elements, Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+		return append(elements, DEFAULT_CHAIN_SETTING_LIST);
 	}
 	
-	public Node<E>[] append(Collection<E> elements, LinkageDefinition<?>... linkageDefinitions)
+	@SuppressWarnings("unchecked")
+	public Node<E>[] append(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return append(elements, Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+			return append(elements, DEFAULT_CHAIN_SETTING_LIST);
 		}
 		return append(elements, Arrays.asList((LinkageDefinition<E>[])linkageDefinitions));
 		
@@ -153,7 +113,7 @@ public class MultiChainList<E>
 		
 		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
 		{
-			linkageDefinitions = Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS);
+			linkageDefinitions = DEFAULT_CHAIN_SETTING_LIST;
 		}
 		
 		writeLock.lock();
@@ -171,7 +131,7 @@ public class MultiChainList<E>
 				nodes[index++] = node;
 				for(ChainsByPartition chainsByPartition : refactorLinkageDefintions(linkageDefinitions).values())
 				{
-					chainsByPartition.partition.appendNode(node, chainsByPartition.chains, modificationVersion);
+					chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
 				}
 			}
 		}
@@ -185,25 +145,26 @@ public class MultiChainList<E>
 	
 	public Node<E> append(E element)
 	{
-		return append(element, Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+		return append(element, DEFAULT_CHAIN_SETTING_LIST);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public Node<E> append(E element, LinkageDefinition<?>... linkageDefinitions)
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return append(element, Arrays.asList( (LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS));
+			return append(element, DEFAULT_CHAIN_SETTING_LIST);
 		}
 		return append(element, Arrays.asList((LinkageDefinition<E>[])linkageDefinitions));	
 	}
-	@SuppressWarnings("unchecked")
+	
 	public Node<E> append(E element, List<LinkageDefinition<E>> linkageDefinitionList)
 	{
 		Node<E> node = null;
 		
 		if((linkageDefinitionList == null) || (linkageDefinitionList.size() == 0))
 		{
-			linkageDefinitionList = Arrays.asList((LinkageDefinition<E>[])DEFAULT_CHAIN_SETTINGS);
+			linkageDefinitionList = DEFAULT_CHAIN_SETTING_LIST;
 		}
 		
 		writeLock.lock();
@@ -216,7 +177,7 @@ public class MultiChainList<E>
 			node = new Node<E>(element,this);
 			for(ChainsByPartition chainsByPartition : refactorLinkageDefintions(linkageDefinitionList).values())
 			{
-				chainsByPartition.partition.appendNode(node, chainsByPartition.chains, modificationVersion);
+				chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
 			}
 		}
 		finally 
@@ -303,7 +264,7 @@ public class MultiChainList<E>
 	}
 	
 	
-	public Snapshot<E> createSnapshotAndClearChain(String chainName,String partitionName)
+	public Snapshot<E> createImmutableSnapshotAndClearChain(String chainName,String partitionName)
 	{
 		writeLock.lock();
 		try
@@ -318,23 +279,25 @@ public class MultiChainList<E>
 				this.snapshotVersion = this.modificationVersion;
 				this.openSnapshotVersionList.add(this.snapshotVersion);
 			}
-			ChainEndpointLinkage<E> beginLinkage = partition.getChainBegin().getLink(chainName);
+			ChainEndpointLink<E> beginLink = partition.getChainBegin().getLink(chainName);
 			Snapshot<E> snapshot = new Snapshot<>(this.snapshotVersion, chainName, partition, this);
 			this.snapshotVersion.addSnapshot(snapshot);
-			if(beginLinkage == null)
+			if(beginLink == null)
 			{
 				return snapshot;
 			}
-			if(beginLinkage.getSize() == 0)
+			if(beginLink.getSize() == 0)
 			{
 				return snapshot;
 			}
 			getModificationVersion();
-			ChainEndpointLinkage<E> endLinkage = partition.getChainEnd().getLink(chainName);
-			beginLinkage.head = beginLinkage.createNewHead(modificationVersion);
-			endLinkage.head.previewsLink = beginLinkage.head;
-			beginLinkage.head.nextLink = endLinkage.head;
-			if(beginLinkage.head.olderVersion.nextLink == null)
+			ChainEndpointLink<E> endLink = partition.getChainEnd().getLink(chainName);
+			beginLink = beginLink.createNewerLink(modificationVersion);
+			endLink.previewsLink = beginLink;
+			beginLink.nextLink = endLink;
+			beginLink.setSize(0);
+			endLink.setSize(0);
+			if(beginLink.olderVersion.nextLink == null)
 			{
 				return snapshot;
 			}
@@ -347,7 +310,7 @@ public class MultiChainList<E>
 			{
 				_obsoleteLinkList.clear();
 			}
-			_obsoleteLinkList.add(beginLinkage.head.olderVersion.nextLink);
+			_obsoleteLinkList.add(beginLink.olderVersion.nextLink);
 			Link<E> obsoleteLink;
 			while(! _obsoleteLinkList.isEmpty())
 			{
@@ -357,7 +320,7 @@ public class MultiChainList<E>
 				{
 					continue;
 				}
-				if(obsoleteLink.linkage instanceof ChainEndpointLinkage)
+				if(obsoleteLink instanceof ChainEndpointLink)
 				{
 					continue;
 				}
@@ -381,7 +344,7 @@ public class MultiChainList<E>
 			writeLock.unlock();
 		}
 	}
-	public Snapshot<E> createSnapshot(String chainName,String partitionName)
+	public Snapshot<E> createImmutableSnapshot(String chainName,String partitionName)
 	{
 		writeLock.lock();
 		try
@@ -433,7 +396,7 @@ public class MultiChainList<E>
 				this.snapshotVersion = null;
 				if(waitForClean != null)
 				{
-					for(ChainEndpointLinkage<E> beginLinkage : waitForClean)
+					for(ChainEndpointLink<E> beginLinkage : waitForClean)
 					{
 						beginLinkage.cleanObsolete();
 					}
@@ -556,7 +519,7 @@ public class MultiChainList<E>
 				
 				_cachedRefactoredLinkageDefinition.put(partition.getName(), chainsByPartition);
 			}
-			chainsByPartition.chains.add(linkageDefinition.getChainName());
+			chainsByPartition.chains.put(linkageDefinition.getChainName(),linkageDefinition);
 		}
 		return _cachedRefactoredLinkageDefinition;
 	}
@@ -586,7 +549,7 @@ public class MultiChainList<E>
 		
 		private long sequence;
 		
-		private Set<ChainEndpointLinkage<E>> modifiedBeginLinkages;
+		private Set<ChainEndpointLink<E>> modifiedBeginLinkages;
 		private Set<Snapshot<E>> openSnapshots;
 		
 		protected void addSnapshot(Snapshot<E> snapshot)
@@ -614,11 +577,11 @@ public class MultiChainList<E>
 				
 				if(modifiedBeginLinkages != null)
 				{
-					for(ChainEndpointLinkage<E> modifiedBeginLinkage : modifiedBeginLinkages)
+					for(ChainEndpointLink<E> modifiedBeginLinkage : modifiedBeginLinkages)
 					{
 						if(waitForClean == null)
 						{
-							waitForClean = new HashSet<ChainEndpointLinkage<E>>();
+							waitForClean = new HashSet<ChainEndpointLink<E>>();
 						}
 						waitForClean.add(modifiedBeginLinkage);
 						//modifiedBeginLinkage.versionRemoved(this);
@@ -645,11 +608,11 @@ public class MultiChainList<E>
 			return Long.compare(this.sequence, o.sequence);
 		}
 		
-		protected void addModifiedLink(ChainEndpointLinkage<E> beginLinkage)
+		protected void addModifiedLink(ChainEndpointLink<E> beginLinkage)
 		{
 			if(this.modifiedBeginLinkages == null)
 			{
-				this.modifiedBeginLinkages = new HashSet<ChainEndpointLinkage<E>>();
+				this.modifiedBeginLinkages = new HashSet<ChainEndpointLink<E>>();
 			}
 			this.modifiedBeginLinkages.add(beginLinkage);
 		}
@@ -682,6 +645,6 @@ public class MultiChainList<E>
 	protected class ChainsByPartition
 	{
 		public Partition<E> partition;
-		public Set<String> chains = new HashSet<String>();
+		public Map<String,LinkageDefinition<E>> chains = new HashMap<String,LinkageDefinition<E>>();
 	}
 }

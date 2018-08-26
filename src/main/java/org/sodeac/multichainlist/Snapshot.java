@@ -16,7 +16,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
-import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
+import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class Snapshot<E> implements AutoCloseable, Collection<E>
 {
@@ -39,19 +39,19 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		this.partition = partition;
 		this.parent = parent;
 		this.chainName = chainName;
-		ChainEndpointLinkage<E> beginLinkage = this.partition.getChainBegin().getLink(this.chainName);
-		if(beginLinkage == null)
+		ChainEndpointLink<E> beginLink = this.partition.getChainBegin().getLink(this.chainName);
+		if(beginLink == null)
 		{
 			firstLink = null;
 			size = 0;
 		}
 		else
 		{
-			firstLink = beginLinkage.head.nextLink;
-			this.size = beginLinkage.getSize();
+			firstLink = beginLink.nextLink;
+			this.size = beginLink.getSize();
 		}
-		ChainEndpointLinkage<E> endLinkage = this.partition.getChainEnd().getLink(this.chainName) ; 
-		lastLink = endLinkage == null ? null : endLinkage.head.previewsLink;
+		ChainEndpointLink<E> endLink = this.partition.getChainEnd().getLink(this.chainName) ; 
+		lastLink = endLink == null ? null : endLink.previewsLink;
 	}
 	
 	protected Snapshot(MultiChainList<E> parent)

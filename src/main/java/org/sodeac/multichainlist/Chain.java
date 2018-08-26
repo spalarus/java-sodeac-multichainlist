@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
-import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
+import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class Chain<E>
 {
@@ -77,7 +77,7 @@ public class Chain<E>
 				for(int i = 0; i < partitions.length;  i++)
 				{
 					Partition<E> partition = partitions[i];
-					ChainEndpointLinkage<E> beginLinkage = partition.getChainBegin().getLink(chainName);
+					ChainEndpointLink<E> beginLinkage = partition.getChainBegin().getLink(chainName);
 					if((beginLinkage == null) || (beginLinkage.getSize() == 0))
 					{
 						continue;

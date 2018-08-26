@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.sodeac.multichainlist;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -29,6 +29,7 @@ public class Partition<E>
 		this.multiChainList = multiChainList;
 		this.chainBegin = new ChainEndpoint();
 		this.chainEnd = new ChainEndpoint();
+		this.privateLinkageDefinitions = new HashMap<String,LinkageDefinition<E>>();
 	}
 	
 	protected String name;
@@ -37,6 +38,7 @@ public class Partition<E>
 	protected volatile Partition<E> next = null;
 	protected ChainEndpoint chainBegin = null;
 	protected ChainEndpoint chainEnd = null;
+	private Map<String,LinkageDefinition<E>> privateLinkageDefinitions = null;
 	
 	public String getName()
 	{
@@ -53,109 +55,6 @@ public class Partition<E>
 		return next;
 	}
 	
-	/*protected void clearChain(ChainEndpointLinkage<E> beginLink, ChainEndpointLinkage<E> endLink, SnapshotVersion currentVersion, boolean openSnapshots)
-	{
-		if((beginLink == null) && (endLink == null))
-		{
-			return;
-		}
-		
-		if(openSnapshots)
-		{
-			if(beginLink.head.version.getSequence() < currentVersion.getSequence())
-			{
-				beginLink.createNewVersion(currentVersion);
-			}
-			if(beginLink.head.version.getSequence() < currentVersion.getSequence())
-			{
-				beginLink.createNewVersion(currentVersion);
-			}
-		}
-		else
-		{
-			if(beginLink.head.olderVersion != null)
-			{
-				throw new RuntimeException("intern link error: no open snaphots && beginLink.olderversion != null ");
-			}
-			if(endLink.head.olderVersion != null)
-			{
-				throw new RuntimeException("intern link error: no open snaphots && endLink.olderversion != null ");
-			}
-		}
-		
-		clearLink(beginLink.head,openSnapshots);
-		
-		beginLink.head.nextLink = endLink.head;
-		endLink.head.previewsLink = beginLink.head;
-				
-		beginLink.setSize(0L);
-		endLink.setSize(0L);
-	}*/
-	
-	/*private void clearLink(Link<E> startLink, boolean openSnapshots)
-	{
-		LinkedList<Link<E>> todo = new LinkedList<Link<E>>();
-		todo.addLast(startLink);
-		
-		while(! todo.isEmpty())
-		{
-			Link<E> link = todo.removeFirst();
-			
-			if(link.olderVersion != null)
-			{
-				todo.add(link.olderVersion);
-			}
-			if(link.nextLink != null)
-			{
-				todo.add(link.nextLink);
-			}
-			
-			if((link.node != null) && (link.linkage != null))
-			{
-				if(link.node.defaultChainLink == link.linkage)
-				{
-					link.node.defaultChainLink = null;
-				}
-				else if(link.node.links !=  null)
-				{
-					link.node.links.remove(link.linkage.chainName);
-				}
-				
-				if((link.node.defaultChainLink == null) && ((link.node.links == null) || link.node.links.isEmpty()))
-				{
-					link.node.links = null;
-					link.node.multiChainList = null;
-					link.node.element = null;
-				}
-			}
-			if(! openSnapshots)
-			{
-				link.clear();
-			}
-		}
-	}*/
-	
-	/*public void clear()
-	{
-		multiChainList.getWriteLock().lock();
-		try
-		{
-			boolean openSnapshots = multiChainList.openSnapshotVersionSize() > 0L;
-			this.clearChain((ChainEndpointLinkage<E>)chainBegin.defaultChainLink,(ChainEndpointLinkage<E>) chainEnd.defaultChainLink, multiChainList.getModificationVersion(),openSnapshots);
-			if(chainBegin.links != null)
-			{
-				for(String chainName : chainBegin.links.keySet())
-				{
-					this.clearChain((ChainEndpointLinkage<E>)chainBegin.links.get(chainName),(ChainEndpointLinkage<E>) chainEnd.links.get(chainName), multiChainList.getModificationVersion(),openSnapshots);
-				}
-			}
-		}
-		finally 
-		{
-			multiChainList.getWriteLock().unlock();
-		}
-	}*/
-	
 	protected ChainEndpoint getChainBegin()
 	{
 		return chainBegin;
@@ -166,63 +65,81 @@ public class Partition<E>
 		return chainEnd;
 	}
 
-	protected void appendNode(Node<E> node, Set<String> chains, SnapshotVersion currentVersion)
+	protected void appendNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion currentVersion)
 	{
-		ChainEndpointLinkage<E> linkBegin;
-		ChainEndpointLinkage<E> linkEnd;
-		Linkage<E> link;
+		ChainEndpointLink<E> linkBegin;
+		ChainEndpointLink<E> linkEnd;
+		Link<E> link;
+		LinkageDefinition<E> privateLinkageDefinition;
+		boolean isEndpoint;
 		
-		
-		
-		for(String chainName : chains)
+		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
 		{
-			linkBegin = chainBegin.getLink(chainName);
+			privateLinkageDefinition = privateLinkageDefinitions.get(linkageDefinition.getChainName());
+			if(privateLinkageDefinition == null)
+			{
+				privateLinkageDefinition = new LinkageDefinition<>(linkageDefinition.getChainName(), this);
+				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
+			}
+			linkageDefinition = privateLinkageDefinition;
+			linkBegin = chainBegin.getLink(linkageDefinition.getChainName());
 			if(linkBegin == null)
 			{
-				linkBegin = chainBegin.createLink(chainName,this, currentVersion);
+				linkBegin = chainBegin.createHead(linkageDefinition, currentVersion);
 			}
-			linkEnd = chainEnd.getLink(chainName);
+			linkEnd = chainEnd.getLink(linkageDefinition.getChainName());
 			if(linkEnd == null)
 			{
-				linkEnd = chainEnd.createLink(chainName,this, currentVersion);
+				linkEnd = chainEnd.createHead(linkageDefinition, currentVersion);
 			}
-			if(linkBegin.head.nextLink == null)
+			if(linkBegin.nextLink == null)
 			{
-				linkBegin.head.nextLink = linkEnd.head;
+				linkBegin.nextLink = linkEnd;
 			}
-			if(linkEnd.head.previewsLink == null)
+			if(linkEnd.previewsLink == null)
 			{
-				linkEnd.head.previewsLink = linkBegin.head;
+				linkEnd.previewsLink = linkBegin;
 			}
 			
-			Link<E> prev = linkEnd.head.previewsLink;
-			Link<E> next = linkEnd.head;
+			Link<E> prev = linkEnd.previewsLink;
 			
-			link = node.createLink(chainName, this, currentVersion);
+			link = node.createHead(linkageDefinition, currentVersion);
 
 			Link<E> previewsOfPreviews = null;
-			if((prev.version != currentVersion) && (prev.linkage != linkBegin))
+			if((prev.version != currentVersion) && (prev != linkBegin))
 			{
-				if(prev.version.getSequence() < currentVersion.getSequence()) // was, wenn keine Snapshots?
+				if(prev.version.getSequence() < currentVersion.getSequence())
 				{
 					if(! multiChainList.openSnapshotVersionList.isEmpty())
 					{
 						previewsOfPreviews = prev.previewsLink;
-						prev = prev.linkage.createNewHead(currentVersion);
+						if(prev.node != null)
+						{
+							isEndpoint = ! prev.node.isPayload();
+						}
+						else
+						{
+							isEndpoint = prev instanceof ChainEndpointLink;
+						}
+						prev = prev.createNewerLink(currentVersion);
+						if(isEndpoint)
+						{
+							linkBegin = chainBegin.getLink(linkageDefinition.getChainName());
+						}
 						prev.previewsLink = previewsOfPreviews;
 					}
 				}
 			}
 			
 			// link new link with endlink
-			linkEnd.head.previewsLink = link.head;
-			link.head.nextLink = linkEnd.head;
+			linkEnd.previewsLink = link;
+			link.nextLink = linkEnd;
 			
 			// link new link with previews link
-			link.head.previewsLink = prev;
+			link.previewsLink = prev;
 			
 			// set new route
-			prev.nextLink = link.head;
+			prev.nextLink = link;
 			
 			if(previewsOfPreviews != null)
 			{
@@ -240,8 +157,8 @@ public class Partition<E>
 		multiChainList.getReadLock().lock();
 		try
 		{
-			ChainEndpointLinkage<E> endpointLinkage = chainBegin.getLink(chainName);
-			return endpointLinkage == null ? 0 : (int)endpointLinkage.size;
+			ChainEndpointLink<E> beginLink = chainBegin.getLink(chainName);
+			return beginLink == null ? 0 : (int)beginLink.size;
 		}
 		finally 
 		{
@@ -254,20 +171,16 @@ public class Partition<E>
 		multiChainList.getReadLock().lock();
 		try
 		{
-			ChainEndpointLinkage<E> endpointLinkage = chainBegin.getLink(chainName);
-			if(endpointLinkage == null)
+			ChainEndpointLink<E> beginLink = chainBegin.getLink(chainName);
+			if(beginLink == null)
 			{
 				throw new NoSuchElementException();
 			}
-			if(endpointLinkage.head == null)
+			if(beginLink.nextLink == null)
 			{
 				throw new NoSuchElementException();
 			}
-			if(endpointLinkage.head.nextLink == null)
-			{
-				throw new NoSuchElementException();
-			}
-			return endpointLinkage.head.nextLink.element;
+			return beginLink.nextLink.element;
 		}
 		finally 
 		{
@@ -280,20 +193,16 @@ public class Partition<E>
 		multiChainList.getReadLock().lock();
 		try
 		{
-			ChainEndpointLinkage<E> endpointLinkage = chainEnd.getLink(chainName);
-			if(endpointLinkage == null)
+			ChainEndpointLink<E> endLink = chainEnd.getLink(chainName);
+			if(endLink == null)
 			{
 				throw new NoSuchElementException();
 			}
-			if(endpointLinkage.head == null)
+			if(endLink.nextLink == null)
 			{
 				throw new NoSuchElementException();
 			}
-			if(endpointLinkage.head.nextLink == null)
-			{
-				throw new NoSuchElementException();
-			}
-			return endpointLinkage.head.nextLink.element;
+			return endLink.nextLink.element;
 		}
 		finally 
 		{
@@ -335,29 +244,28 @@ public class Partition<E>
 		}
 
 		@Override
-		protected ChainEndpointLinkage<E> createLink(String chainName, Partition<E> partition, SnapshotVersion currentVersion)
+		protected ChainEndpointLink<E> getLink(String chainName)
 		{
-			Linkage<E> link = new ChainEndpointLinkage<E>(this, chainName, partition, currentVersion);
-			return (ChainEndpointLinkage<E>)super.setLink(chainName, link);
+			return (ChainEndpointLink<E>)super.getLink(chainName);
 		}
 
 		@Override
-		protected ChainEndpointLinkage<E> getLink(String chainName)
+		protected ChainEndpointLink<E> createHead(LinkageDefinition<E> linkageDefinition, SnapshotVersion currentVersion)
 		{
-			return (ChainEndpointLinkage<E>)super.getLink(chainName);
+			Link<E> link = new ChainEndpointLink<E>(linkageDefinition, this, currentVersion);
+			return (ChainEndpointLink<E>)super.setHead(linkageDefinition.getChainName(), link);
 		}
-		
 	}
 
-	protected static class ChainEndpointLinkage<E> extends Linkage<E>
+	protected static class ChainEndpointLink<E> extends Link<E>
 	{
-		//protected Set<SnapshotVersion> modifiedByVersions = null;
-		protected ChainEndpointLinkage(Node<E> parent, String chainName, Partition<E> partition,SnapshotVersion currentVersion)
+		protected ChainEndpointLink(LinkageDefinition<E> linkageDefinition, Node<E> parent, SnapshotVersion currentVersion)
 		{
-			super(parent, chainName, partition, currentVersion);
+			super(linkageDefinition, parent, currentVersion);
 		}
 		
 		private long size = 0;
+		LinkedList<Link<E>> _todoList = new LinkedList<Link<E>>();
 		
 		protected long getSize()
 		{
@@ -379,28 +287,17 @@ public class Partition<E>
 			return --size;
 		}
 		
-		/*protected void modifiedByVersion(SnapshotVersion version)
+		protected ChainEndpointLink<E> createNewerLink(SnapshotVersion currentVersion)
 		{
-			if(modifiedByVersions == null)
-			{
-				modifiedByVersions = new HashSet<SnapshotVersion>();
-			}
-			modifiedByVersions.add(version);
-		}*/
-		
-		/*protected boolean versionRemoved(SnapshotVersion version)
-		{
-			if(modifiedByVersions == null)
-			{
-				return true;
-			}
-			modifiedByVersions.remove(version);
-			
-			if(modifiedByVersions.isEmpty())
-			{
-				clean();
-			}
-		}*/
+			currentVersion.addModifiedLink(this);
+			ChainEndpointLink<E> newVersion = new ChainEndpointLink<>(this.linkageDefinition, this.node,currentVersion);
+			newVersion.size = size;
+			newVersion.olderVersion = this;
+			this.newerVersion = newVersion;
+			this.obsolete = true;
+			this.node.setHead(this.linkageDefinition.getChainName(), newerVersion);
+			return newVersion;
+		}
 
 		@Override
 		public String toString()
@@ -408,33 +305,36 @@ public class Partition<E>
 			return super.toString() + " size " + size;
 		}
 		
+		/*
+		 * Must run in write lock !!!!
+		 */
 		protected void cleanObsolete()
 		{
-			LinkedList<Link<E>> todoList = new LinkedList<Link<E>>(); // TODO Cache
+			_todoList.clear();
 			
-			if(super.head.olderVersion != null)
+			if(super.olderVersion != null)
 			{
-				todoList.add(super.head.olderVersion);
-				super.head.olderVersion = null;
+				_todoList.add(super.olderVersion);
+				super.olderVersion = null;
 			}
 			
-			if((super.head.nextLink != null) && (!(super.head.nextLink.linkage instanceof ChainEndpointLinkage)))
+			if((super.nextLink != null) && (!(super.nextLink instanceof ChainEndpointLink)))
 			{
-				todoList.add(super.head.nextLink);
+				_todoList.add(super.nextLink);
 			}
 			
-			while(! todoList.isEmpty())
+			while(! _todoList.isEmpty())
 			{
-				Link<E> link = todoList.removeFirst();
+				Link<E> link = _todoList.removeFirst();
 				if(link.olderVersion != null)
 				{
-					todoList.addLast(link.olderVersion);
+					_todoList.addLast(link.olderVersion);
 				}
 				if(link.nextLink != null)
 				{
-					if(!(link.nextLink.linkage instanceof ChainEndpointLinkage))
+					if(!(link.nextLink instanceof ChainEndpointLink))
 					{
-						todoList.add(link.nextLink);
+						_todoList.add(link.nextLink);
 					}
 				}
 				if(link.obsolete)
@@ -463,7 +363,6 @@ public class Partition<E>
 	{
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((multiChainList == null) ? 0 : multiChainList.hashCode());
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		return result;
 	}
@@ -471,7 +370,30 @@ public class Partition<E>
 	@Override
 	public boolean equals(Object obj)
 	{
-		return this == obj;	
+		if (this == obj)
+		{
+			return true;
+		}
+		if (obj == null)
+		{
+			return this.name == null;
+		}
+		if (getClass() != obj.getClass())
+		{
+			return false;
+		}
+		Partition other = (Partition) obj;
+		if (name == null)
+		{
+			if (other.name != null)
+			{
+				return false;
+			}
+		} else if (!name.equals(other.name))
+		{
+			return false;
+		}
+		return true;
 	}
 
 	@Override
@@ -486,8 +408,8 @@ public class Partition<E>
 		try
 		{
 			StringBuilder builder = new StringBuilder();
-			ChainEndpointLinkage<E> chainEndpointLinkage = getChainBegin().getLink(chainName);
-			if(chainEndpointLinkage == null)
+			ChainEndpointLink<E> chainEndpointLink = getChainBegin().getLink(chainName);
+			if(chainEndpointLink == null)
 			{
 				builder.append("Chain " + chainName + " not found");
 				return builder.toString();
@@ -498,17 +420,17 @@ public class Partition<E>
 			
 			
 			
-			if((chainEndpointLinkage.head.nextLink != null))
+			if((chainEndpointLink.nextLink != null))
 			{
 				
 				
-				if(!(chainEndpointLinkage.head.nextLink.linkage instanceof ChainEndpointLinkage))
+				if(!(chainEndpointLink.nextLink instanceof ChainEndpointLink))
 				{
-					builder.append("ChainBegin-HEAD(" + Integer.toHexString(chainEndpointLinkage.head.hashCode())+ ").nextLink / open versions: ( ");
+					builder.append("ChainBegin-HEAD(" + Integer.toHexString(chainEndpointLink.hashCode())+ ").nextLink / open versions: ( ");
 				}
 				else
 				{
-					builder.append("ChainBegin-HEAD(" + Integer.toHexString(chainEndpointLinkage.head.hashCode())+ ").nextLink links endPoint open versions: ( ");
+					builder.append("ChainBegin-HEAD(" + Integer.toHexString(chainEndpointLink.hashCode())+ ").nextLink links endPoint open versions: ( ");
 				}
 			}
 			
@@ -522,7 +444,7 @@ public class Partition<E>
 			
 			builder.append(")\n");
 			
-			Link<E> olderBegin = chainEndpointLinkage.head;
+			Link<E> olderBegin = chainEndpointLink;
 			while(olderBegin.olderVersion != null)
 			{
 				olderBegin = olderBegin.olderVersion;
@@ -532,7 +454,7 @@ public class Partition<E>
 					todoList.add(olderBegin);
 					handled.add(olderBegin);
 				}
-				if((olderBegin.nextLink != null) && (!(olderBegin.nextLink.linkage instanceof ChainEndpointLinkage)))
+				if((olderBegin.nextLink != null) && (!(olderBegin.nextLink instanceof ChainEndpointLink)))
 				{
 					builder.append("\tOlder ChainBegin.nextLink " + Integer.toHexString(olderBegin.nextLink.hashCode()) + "\n");
 					if(! handled.contains(olderBegin.nextLink))
@@ -544,14 +466,14 @@ public class Partition<E>
 				}
 			}
 			
-			if((chainEndpointLinkage.head.nextLink != null))
+			if((chainEndpointLink.nextLink != null))
 			{
-				if(!(chainEndpointLinkage.head.nextLink.linkage instanceof ChainEndpointLinkage))
+				if(!(chainEndpointLink.nextLink instanceof ChainEndpointLink))
 				{
-					if(! handled.contains(chainEndpointLinkage.head.nextLink))
+					if(! handled.contains(chainEndpointLink.nextLink))
 					{
-						todoList.add(chainEndpointLinkage.head.nextLink);
-						handled.add(chainEndpointLinkage.head.nextLink);
+						todoList.add(chainEndpointLink.nextLink);
+						handled.add(chainEndpointLink.nextLink);
 					}
 				}
 			}
@@ -560,8 +482,8 @@ public class Partition<E>
 			while(! todoList.isEmpty())
 			{
 				Link<E> link = todoList.removeFirst();
-				boolean isCleared = link.linkage == null;
-				boolean isEndpoint = link.linkage instanceof ChainEndpointLinkage;
+				boolean isCleared = link == null;
+				boolean isEndpoint = link instanceof ChainEndpointLink;
 				
 				builder.append("Analyse Link " + Integer.toHexString(link.hashCode()) + " - obsolete: " +  link.obsolete + " - cleared " + isCleared + " - endpoint: " + isEndpoint + " - value: " + link.getElement() + "\n");
 				if(link.olderVersion != null)
@@ -584,7 +506,7 @@ public class Partition<E>
 				}
 				if(link.nextLink != null)
 				{
-					if(!(link.nextLink.linkage instanceof ChainEndpointLinkage))
+					if(!(link.nextLink instanceof ChainEndpointLink))
 					{
 						builder.append("\tnext: " + Integer.toHexString(link.nextLink.hashCode()) + "\n");
 						if(! handled.contains(link.nextLink))
@@ -601,7 +523,7 @@ public class Partition<E>
 				}
 				if(link.previewsLink != null)
 				{
-					if(!(link.previewsLink.linkage instanceof ChainEndpointLinkage))
+					if(!(link.previewsLink instanceof ChainEndpointLink))
 					{
 						builder.append("\tprev: " + Integer.toHexString(link.previewsLink.hashCode()) + "\n");
 						if(! handled.contains(link.previewsLink))
@@ -626,4 +548,6 @@ public class Partition<E>
 			multiChainList.writeLock.unlock();
 		}
 	}
+	
+	
 }

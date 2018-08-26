@@ -11,20 +11,21 @@
 package org.sodeac.multichainlist;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
+import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class Link<E>
 {
-	public Link(Linkage<E> parent, Node<E> node, E element, SnapshotVersion version)
+	public Link(LinkageDefinition<E> linkageDefinition, Node<E> node, SnapshotVersion version)
 	{
 		super();
-		this.linkage = parent;
+		this.linkageDefinition = linkageDefinition;
 		this.node = node;
-		this.element = element;
+		this.element = node.element;
 		this.version = version;
 	}
 	
 	protected volatile boolean obsolete = false;
-	protected volatile Linkage<E> linkage;
+	protected volatile LinkageDefinition<E> linkageDefinition;
 	protected volatile Node<E> node;
 	protected volatile E element;
 	protected volatile SnapshotVersion version;
@@ -32,6 +33,18 @@ public class Link<E>
 	protected volatile Link<E> olderVersion;
 	protected volatile Link<E> previewsLink;
 	protected volatile Link<E> nextLink;
+	
+	protected Link<E> createNewerLink(SnapshotVersion currentVersion)
+	{
+		ChainEndpointLink<E> chainEndpointLinkage = linkageDefinition.getPartition().getChainBegin().getLink(linkageDefinition.getChainName());
+		currentVersion.addModifiedLink(chainEndpointLinkage);
+		Link<E> newVersion = new Link<>(this.linkageDefinition, this.node,currentVersion);
+		newVersion.olderVersion = this;
+		this.newerVersion = newVersion;
+		this.obsolete = true;
+		this.node.setHead(this.linkageDefinition.getChainName(), newVersion);
+		return newVersion;
+	}
 	
 	public E getElement()
 	{
@@ -45,7 +58,7 @@ public class Link<E>
 	
 	public boolean unlink()
 	{
-		Linkage<E> linkage = this.linkage;
+		LinkageDefinition<E> linkage = this.linkageDefinition;
 		Node<E> node = this.node;
 		if(linkage == null)
 		{
@@ -55,12 +68,12 @@ public class Link<E>
 		{
 			return false;
 		}
-		return node.unlink(linkage.chainName);
+		return node.unlink(linkage.getChainName());
 	}
 
 	protected void clear()
 	{
-		this.linkage = null;
+		this.linkageDefinition = null;
 		this.version = null;
 		this.newerVersion = null;
 		this.olderVersion = null;

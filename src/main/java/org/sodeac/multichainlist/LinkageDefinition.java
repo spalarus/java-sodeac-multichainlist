@@ -29,4 +29,62 @@ public class LinkageDefinition<E>
 	{
 		return partition;
 	}
+	
+	@Override
+	public int hashCode()
+	{
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((chainName == null) ? 0 : chainName.hashCode());
+		result = prime * result + ((partition == null) ? 0 : partition.hashCode());
+		return result;
+	}
+	
+	@Override
+	public boolean equals(Object obj)
+	{
+		if (this == obj)
+		{
+			return true;
+		}
+		if (obj == null)
+		{
+			return false;
+		}
+		if (getClass() != obj.getClass())
+		{
+			return false;
+		}
+		LinkageDefinition other = (LinkageDefinition) obj;
+		if (chainName == null)
+		{
+			if (other.chainName != null)
+			{
+				return false;
+			}
+		} else if (!chainName.equals(other.chainName))
+		{
+			return false;
+		}
+		
+		if (partition == null)
+		{
+			if ((other.partition != null) && (other.partition.name != null))
+			{
+				return false;
+			}
+		} 
+		else if (!partition.equals(other.partition))
+		{
+			return false;
+		}
+		return true;
+	}
+	@Override
+	public String toString()
+	{
+		return "LinkageDefinition " + chainName + " " + this.partition;
+	}
+	
+	
 }

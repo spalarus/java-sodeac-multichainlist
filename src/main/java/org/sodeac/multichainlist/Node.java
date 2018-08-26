@@ -14,12 +14,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
 
 import org.sodeac.multichainlist.MultiChainList.ChainsByPartition;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
-import org.sodeac.multichainlist.Partition.ChainEndpointLinkage;
+import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class Node<E>
 {
@@ -31,8 +30,8 @@ public class Node<E>
 	}
 	protected MultiChainList<E> multiChainList = null;
 	protected E element = null;
-	protected Linkage<E> defaultChainLinkage = null;
-	protected Map<String,Linkage<E>> additionalLinkages = null;
+	protected Link<E> headOfDefaultChain = null;
+	protected Map<String,Link<E>> headsOfAdditionalChains = null;
 	
 	@SuppressWarnings("unchecked")
 	public final LinkageDefinition<E>[] getLinkageDefinitions()
@@ -46,18 +45,18 @@ public class Node<E>
 		multiChainList.readLock.lock();
 		try
 		{
-			int count = defaultChainLinkage == null ? 0 : 1;
-			definitionList = new LinkageDefinition[additionalLinkages == null ? count : ( count + additionalLinkages.size())];
+			int count = headOfDefaultChain == null ? 0 : 1;
+			definitionList = new LinkageDefinition[headsOfAdditionalChains == null ? count : ( count + headsOfAdditionalChains.size())];
 			
 			if(count == 1)
 			{
-				definitionList[0] = new LinkageDefinition<E>(defaultChainLinkage.chainName,defaultChainLinkage.partition);
+				definitionList[0] = headOfDefaultChain.linkageDefinition;
 			}
-			if(additionalLinkages != null)
+			if(headsOfAdditionalChains != null)
 			{
-				for(Entry<String,Linkage<E>> entry : additionalLinkages.entrySet())
+				for(Entry<String,Link<E>> entry : headsOfAdditionalChains.entrySet())
 				{
-					definitionList[count] = new LinkageDefinition<E>(entry.getKey(),entry.getValue().partition);
+					definitionList[count] = entry.getValue().linkageDefinition;
 				}
 			}
 		}
@@ -69,7 +68,7 @@ public class Node<E>
 		
 	}
 	
-	public final Partition<E> isLink(String chainName)
+	public final LinkageDefinition<E> isLink(String chainName)
 	{
 		if(! isPayload())
 		{
@@ -81,16 +80,16 @@ public class Node<E>
 		{
 			if(chainName == null)
 			{
-				return defaultChainLinkage == null ? null : defaultChainLinkage.partition;
+				return headOfDefaultChain == null ? null : headOfDefaultChain.linkageDefinition;
 			}
 			
-			if(additionalLinkages == null)
+			if(headsOfAdditionalChains == null)
 			{
 				return null;
 			}
 			
-			Linkage<E> linkage;
-			return (linkage = additionalLinkages.get(chainName)) == null ? null : linkage.partition;
+			Link<E> linkage;
+			return (linkage = headsOfAdditionalChains.get(chainName)) == null ? null : linkage.linkageDefinition;
 		}
 		finally 
 		{
@@ -139,7 +138,7 @@ public class Node<E>
 			SnapshotVersion currentVersion = multiChainList.getModificationVersion();
 			for(ChainsByPartition chainsByPartition : multiChainList.refactorLinkageDefintions(linkageDefinitions).values())
 			{
-				chainsByPartition.partition.appendNode(this, chainsByPartition.chains, currentVersion);
+				chainsByPartition.partition.appendNode(this, chainsByPartition.chains.values(), currentVersion);
 			}
 		}
 		finally 
@@ -158,15 +157,15 @@ public class Node<E>
 		multiChainList.getWriteLock().lock();
 		try
 		{
-			if(this.defaultChainLinkage != null)
+			if(this.headOfDefaultChain != null)
 			{
-				unlink(this.defaultChainLinkage);
+				unlink(this.headOfDefaultChain.linkageDefinition.getChainName());
 			}
-			if(additionalLinkages != null)
+			if(headsOfAdditionalChains != null)
 			{
-				for(Linkage<E> linkage : additionalLinkages.values())
+				for(Link<E> link : headsOfAdditionalChains.values())
 				{
-					unlink(linkage);
+					unlink(link.linkageDefinition.getChainName());
 				}
 			}
 		}
@@ -185,7 +184,7 @@ public class Node<E>
 		multiChainList.getWriteLock().lock();
 		try
 		{
-			Linkage<E> link = getLink(chainName);
+			Link<E> link = getLink(chainName);
 			if(link == null)
 			{
 				return false;
@@ -199,39 +198,45 @@ public class Node<E>
 		
 	}
 	
-	private final boolean unlink(Linkage<E> linkage)
+	private final boolean unlink(Link<E> link)
 	{
 		if(! isPayload())
 		{
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
-		if(linkage == null)
+		if(link == null)
 		{
 			return false;
 		}
 		
-		Partition<E> partition = linkage.partition;
-		SnapshotVersion currentVersion = partition.multiChainList.getModificationVersion();
-		ChainEndpointLinkage<E> linkBegin = partition.getChainBegin().getLink(linkage.chainName);
-		ChainEndpointLinkage<E> linkEnd = partition.getChainEnd().getLink(linkage.chainName);
-		boolean createNewVersion = false;
+		if(link.linkageDefinition == null)
+		{
+			return false;
+		}
 		
-		Link<E> prev = linkage.head.previewsLink;
-		Link<E> next = linkage.head.nextLink;
-		linkage.head.obsolete = true;
+		Partition<E> partition = link.linkageDefinition.getPartition();
+		SnapshotVersion currentVersion = partition.multiChainList.getModificationVersion();
+		ChainEndpointLink<E> linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
+		ChainEndpointLink<E> linkEnd = partition.getChainEnd().getLink(link.linkageDefinition.getChainName());
+		boolean createNewVersion = false;
+		boolean isEndpoint;
+		
+		Link<E> prev = link.previewsLink;
+		Link<E> next = link.nextLink;
+		link.obsolete = true;
 		
 		Link<E> nextOfNext = null;
 		Link<E> previewsOfPreviews = null;
 		if((prev.version != currentVersion) || (next.version != currentVersion))
 		{
-			if(next.linkage != linkEnd)
+			if(next != linkEnd)
 			{
 				if(next.version.getSequence() < currentVersion.getSequence())
 				{
 					if(! multiChainList.openSnapshotVersionList.isEmpty())
 					{
 						nextOfNext = next.nextLink;
-						next = next.linkage.createNewHead(currentVersion);
+						next = next.createNewerLink(currentVersion);
 						next.nextLink = nextOfNext;
 						nextOfNext.previewsLink = next;
 						createNewVersion = true;
@@ -243,7 +248,19 @@ public class Node<E>
 				if(! multiChainList.openSnapshotVersionList.isEmpty())
 				{
 					previewsOfPreviews = prev.previewsLink;
-					prev = prev.linkage.createNewHead(currentVersion);
+					if(prev.node != null)
+					{
+						isEndpoint = ! prev.node.isPayload();
+					}
+					else
+					{
+						isEndpoint = prev instanceof ChainEndpointLink;
+					}
+					prev = prev.createNewerLink(currentVersion);
+					if(isEndpoint)
+					{
+						linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
+					}
 					prev.previewsLink = previewsOfPreviews;
 					createNewVersion = true;
 				}
@@ -262,65 +279,70 @@ public class Node<E>
 			previewsOfPreviews.nextLink = prev;
 		}
 		
-		if(createNewVersion || (linkage.head.olderVersion != null))
+		String chainName = link.linkageDefinition.getChainName();
+		
+		if(createNewVersion || (link.olderVersion != null))
 		{
 			currentVersion.addModifiedLink(linkBegin);
 		}
 		else
 		{
-			linkage.head.clear();
+			link.clear();
 		}
 		
 		linkBegin.decrementSize();
 		linkEnd.decrementSize();
 		
-		if(linkage == defaultChainLinkage)
-		{
-			defaultChainLinkage = null;
-		}
-		else if(additionalLinkages !=  null)
-		{
-			additionalLinkages.remove(linkage.chainName);
-		}
+		setHead(chainName, null);
 		
 		return true;
 	}
 	
-	protected Linkage<E> getLink(String chainName)
+	protected Link<E> getLink(String chainName)
 	{
 		if(chainName == null)
 		{
-			return defaultChainLinkage;
+			return headOfDefaultChain;
 		}
-		if(additionalLinkages == null)
+		if(headsOfAdditionalChains == null)
 		{
 			return null;
 		}
-		return additionalLinkages.get(chainName);
+		return headsOfAdditionalChains.get(chainName);
 	}
 	
-	protected Linkage<E> createLink(String chainName, Partition<E> partition,SnapshotVersion currentVersion)
+	protected Link<E> createHead(LinkageDefinition<E> linkageDefinition,SnapshotVersion currentVersion)
 	{
-		return setLink(chainName,new Linkage<>(this, chainName, partition, currentVersion));
+		return setHead(linkageDefinition.getChainName(),new Link<>(linkageDefinition, this, currentVersion));
 	}
 	
-	protected Linkage<E> setLink(String chainName, Linkage<E> link)
+	protected Link<E> setHead(String chainName, Link<E> link)
 	{
 		if(chainName == null)
 		{
-			this.defaultChainLinkage = link;
-			return defaultChainLinkage;
+			this.headOfDefaultChain = link;
+			return headOfDefaultChain;
 		}
-		if(additionalLinkages == null)
+		if(headsOfAdditionalChains == null)
 		{
-			if(additionalLinkages == null)
+			if(link == null)
 			{
-				additionalLinkages = new HashMap<String,Linkage<E>>();
+				return null;
 			}
-			
+			if(headsOfAdditionalChains == null)
+			{
+				headsOfAdditionalChains = new HashMap<String,Link<E>>();
+			}	
 		}
-		additionalLinkages.put(chainName, link);
-		return additionalLinkages.get(chainName);
+		if(link == null)
+		{
+			headsOfAdditionalChains.remove(chainName);
+		}
+		else
+		{
+			headsOfAdditionalChains.put(chainName, link);
+		}
+		return headsOfAdditionalChains.get(chainName);
 	}
 	
 	
@@ -339,6 +361,4 @@ public class Node<E>
 	{
 		return "Node payload: " + isPayload() ;
 	}
-	
-	
 }
