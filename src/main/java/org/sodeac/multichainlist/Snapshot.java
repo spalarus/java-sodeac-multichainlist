@@ -21,7 +21,7 @@ import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 public class Snapshot<E> implements AutoCloseable, Collection<E>
 {
 	protected UUID uuid;
-	protected SnapshotVersion version;
+	protected SnapshotVersion<E> version;
 	private Partition<E> partition;
 	protected MultiChainList<E> parent;
 	private String chainName;
@@ -30,7 +30,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 	protected volatile boolean closed;
 	protected long size;
 	
-	protected Snapshot(SnapshotVersion version, String chainName, Partition<E> partition,MultiChainList<E> parent)
+	protected Snapshot(SnapshotVersion<E> version, String chainName, Partition<E> partition,MultiChainList<E> parent)
 	{
 		super();
 		this.uuid = UUID.randomUUID();

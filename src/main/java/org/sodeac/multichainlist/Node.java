@@ -135,8 +135,8 @@ public class Node<E>
 		multiChainList.getWriteLock().lock();
 		try
 		{
-			SnapshotVersion currentVersion = multiChainList.getModificationVersion();
-			for(ChainsByPartition chainsByPartition : multiChainList.refactorLinkageDefintions(linkageDefinitions).values())
+			SnapshotVersion<E> currentVersion = multiChainList.getModificationVersion();
+			for(ChainsByPartition<E> chainsByPartition : multiChainList.refactorLinkageDefintions(linkageDefinitions).values())
 			{
 				chainsByPartition.partition.appendNode(this, chainsByPartition.chains.values(), currentVersion);
 			}
@@ -215,7 +215,7 @@ public class Node<E>
 		}
 		
 		Partition<E> partition = link.linkageDefinition.getPartition();
-		SnapshotVersion currentVersion = partition.multiChainList.getModificationVersion();
+		SnapshotVersion<E> currentVersion = partition.multiChainList.getModificationVersion();
 		ChainEndpointLink<E> linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
 		ChainEndpointLink<E> linkEnd = partition.getChainEnd().getLink(link.linkageDefinition.getChainName());
 		boolean createNewVersion = false;
@@ -311,7 +311,7 @@ public class Node<E>
 		return headsOfAdditionalChains.get(chainName);
 	}
 	
-	protected Link<E> createHead(LinkageDefinition<E> linkageDefinition,SnapshotVersion currentVersion)
+	protected Link<E> createHead(LinkageDefinition<E> linkageDefinition,SnapshotVersion<E> currentVersion)
 	{
 		return setHead(linkageDefinition.getChainName(),new Link<>(linkageDefinition, this, currentVersion));
 	}

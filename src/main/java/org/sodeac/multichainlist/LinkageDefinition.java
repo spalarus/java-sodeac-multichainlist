@@ -40,6 +40,7 @@ public class LinkageDefinition<E>
 		return result;
 	}
 	
+	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean equals(Object obj)
 	{

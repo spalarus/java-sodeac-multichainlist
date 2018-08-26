@@ -65,7 +65,7 @@ public class Partition<E>
 		return chainEnd;
 	}
 
-	protected void appendNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion currentVersion)
+	protected void appendNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
 	{
 		ChainEndpointLink<E> linkBegin;
 		ChainEndpointLink<E> linkEnd;
@@ -210,7 +210,7 @@ public class Partition<E>
 		}
 	}
 	
-	protected Snapshot<E> createSnapshot(String chainName, SnapshotVersion currentVersion)
+	protected Snapshot<E> createSnapshot(String chainName, SnapshotVersion<E> currentVersion)
 	{
 		multiChainList.writeLock.lock();
 		try
@@ -250,7 +250,7 @@ public class Partition<E>
 		}
 
 		@Override
-		protected ChainEndpointLink<E> createHead(LinkageDefinition<E> linkageDefinition, SnapshotVersion currentVersion)
+		protected ChainEndpointLink<E> createHead(LinkageDefinition<E> linkageDefinition, SnapshotVersion<E> currentVersion)
 		{
 			Link<E> link = new ChainEndpointLink<E>(linkageDefinition, this, currentVersion);
 			return (ChainEndpointLink<E>)super.setHead(linkageDefinition.getChainName(), link);
@@ -259,7 +259,7 @@ public class Partition<E>
 
 	protected static class ChainEndpointLink<E> extends Link<E>
 	{
-		protected ChainEndpointLink(LinkageDefinition<E> linkageDefinition, Node<E> parent, SnapshotVersion currentVersion)
+		protected ChainEndpointLink(LinkageDefinition<E> linkageDefinition, Node<E> parent, SnapshotVersion<E> currentVersion)
 		{
 			super(linkageDefinition, parent, currentVersion);
 		}
@@ -287,7 +287,7 @@ public class Partition<E>
 			return --size;
 		}
 		
-		protected ChainEndpointLink<E> createNewerLink(SnapshotVersion currentVersion)
+		protected ChainEndpointLink<E> createNewerLink(SnapshotVersion<E> currentVersion)
 		{
 			currentVersion.addModifiedLink(this);
 			ChainEndpointLink<E> newVersion = new ChainEndpointLink<>(this.linkageDefinition, this.node,currentVersion);
@@ -367,6 +367,7 @@ public class Partition<E>
 		return result;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean equals(Object obj)
 	{
@@ -436,7 +437,7 @@ public class Partition<E>
 			
 			if(multiChainList.openSnapshotVersionList != null)
 			{
-				for(SnapshotVersion version : multiChainList.openSnapshotVersionList)
+				for(SnapshotVersion<E> version : multiChainList.openSnapshotVersionList)
 				{
 					builder.append(version.getSequence() + " ");
 				}

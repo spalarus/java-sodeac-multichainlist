@@ -15,7 +15,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class Chain<E>
@@ -50,40 +49,43 @@ public class Chain<E>
 	
 	public Snapshot<E> createSnapshot()
 	{
-		return new ChainSnapshot();
+		return new ChainSnapshot<E>(this);
 	}
 	
-	private class ChainSnapshot extends Snapshot<E>
+	private static class ChainSnapshot<E> extends Snapshot<E>
 	{
 		private List<Snapshot<E>> partitionSnapshots = null;
+		private Chain<E> chain = null;
 		
-		private ChainSnapshot()
+		private ChainSnapshot(Chain<E> chain)
 		{
-			super(multiChainList);
+			super(chain.multiChainList);
 			
-			Partition<E>[] partitions = getPartitions();
+			this.chain = chain;
+			
+			Partition<E>[] partitions = this.chain.getPartitions();
 			this.partitionSnapshots = new ArrayList<>(partitions.length);
 			
-			multiChainList.writeLock.lock();
+			this.chain.multiChainList.writeLock.lock();
 			try
 			{
-				if(multiChainList.snapshotVersion == null)
+				if(this.chain.multiChainList.snapshotVersion == null)
 				{
-					multiChainList.snapshotVersion = multiChainList.modificationVersion;
-					multiChainList.openSnapshotVersionList.add(multiChainList.snapshotVersion);
+					this.chain.multiChainList.snapshotVersion = this.chain.multiChainList.modificationVersion;
+					this.chain.multiChainList.openSnapshotVersionList.add(this.chain.multiChainList.snapshotVersion);
 				}
-				super.version = multiChainList.snapshotVersion;
+				super.version = this.chain.multiChainList.snapshotVersion;
 				
 				for(int i = 0; i < partitions.length;  i++)
 				{
 					Partition<E> partition = partitions[i];
-					ChainEndpointLink<E> beginLinkage = partition.getChainBegin().getLink(chainName);
+					ChainEndpointLink<E> beginLinkage = partition.getChainBegin().getLink(this.chain.chainName);
 					if((beginLinkage == null) || (beginLinkage.getSize() == 0))
 					{
 						continue;
 					}
 					
-					Snapshot<E> snapshot = new Snapshot<E>(multiChainList.snapshotVersion, chainName, partition, multiChainList);
+					Snapshot<E> snapshot = new Snapshot<E>(this.chain.multiChainList.snapshotVersion, this.chain.chainName, partition, this.chain.multiChainList);
 					super.size += snapshot.size;
 					if(super.firstLink == null)
 					{
@@ -101,7 +103,7 @@ public class Chain<E>
 			}
 			finally 
 			{
-				multiChainList.writeLock.unlock();
+				this.chain.multiChainList.writeLock.unlock();
 			}
 		}
 
@@ -136,7 +138,7 @@ public class Chain<E>
 		{
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + ((chainName == null) ? 0 : chainName.hashCode());
+			result = prime * result + ((this.chain.chainName == null) ? 0 : this.chain.chainName.hashCode());
 			result = prime * result + ((super.uuid == null) ? 0 : super.uuid.hashCode());
 			result = prime * result + ((super.version == null) ? 0 : super.version.hashCode());
 			return result;

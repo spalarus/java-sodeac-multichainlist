@@ -15,7 +15,7 @@ import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class Link<E>
 {
-	public Link(LinkageDefinition<E> linkageDefinition, Node<E> node, SnapshotVersion version)
+	public Link(LinkageDefinition<E> linkageDefinition, Node<E> node, SnapshotVersion<E> version)
 	{
 		super();
 		this.linkageDefinition = linkageDefinition;
@@ -28,13 +28,13 @@ public class Link<E>
 	protected volatile LinkageDefinition<E> linkageDefinition;
 	protected volatile Node<E> node;
 	protected volatile E element;
-	protected volatile SnapshotVersion version;
+	protected volatile SnapshotVersion<E> version;
 	protected volatile Link<E> newerVersion;
 	protected volatile Link<E> olderVersion;
 	protected volatile Link<E> previewsLink;
 	protected volatile Link<E> nextLink;
 	
-	protected Link<E> createNewerLink(SnapshotVersion currentVersion)
+	protected Link<E> createNewerLink(SnapshotVersion<E> currentVersion)
 	{
 		ChainEndpointLink<E> chainEndpointLinkage = linkageDefinition.getPartition().getChainBegin().getLink(linkageDefinition.getChainName());
 		currentVersion.addModifiedLink(chainEndpointLinkage);
