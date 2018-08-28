@@ -42,24 +42,24 @@ public class MultiChainList<E>
 		this.lastPartition = this.firstPartition;
 		this.partitionList.put(null, this.firstPartition);
 		this.modificationVersion = new SnapshotVersion<E>(this,0L);
+		this.obsoleteList = new LinkedList<Link<E>>();
 	}
 	
 	protected ReentrantReadWriteLock lock;
 	protected ReadLock readLock;
 	protected WriteLock writeLock;
 	
+	private LinkedList<Link<E>> obsoleteList = null;
 	protected HashMap<String, Partition<E>>  partitionList = null;
 	private volatile List<String> partitionNameList = null;
 	protected SnapshotVersion<E> modificationVersion = null;
 	protected SnapshotVersion<E> snapshotVersion = null;
 	protected Set<SnapshotVersion<E>> openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
-	protected Set<ChainEndpointLink<E>> waitForClean = null;
 	private volatile Partition<E> firstPartition = null;
 	private volatile Partition<E> lastPartition = null;
 	
 	private Map<String,ChainsByPartition<E>> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition<E>>();
 	private LinkedList<ChainsByPartition<E>> _cachedChainsByPartition = new LinkedList<ChainsByPartition<E>>();
-	private LinkedList<Link<E>> _obsoleteLinkList = null;
 	
 	public static final LinkageDefinition<?> DEFAULT_CHAIN_SETTING =  new LinkageDefinition<>(null, null);
 	@SuppressWarnings("unchecked")
@@ -302,41 +302,22 @@ public class MultiChainList<E>
 				return snapshot;
 			}
 			
-			if(_obsoleteLinkList == null)
+			Link<E> obsolete = beginLink.olderVersion.nextLink;
+			while(obsolete != null)
 			{
-				_obsoleteLinkList = new LinkedList<Link<E>>();
-			}
-			else
-			{
-				_obsoleteLinkList.clear();
-			}
-			_obsoleteLinkList.add(beginLink.olderVersion.nextLink);
-			Link<E> obsoleteLink;
-			while(! _obsoleteLinkList.isEmpty())
-			{
-				obsoleteLink = _obsoleteLinkList.removeFirst();
-				
-				if(obsoleteLink.node == null)
+				if(obsolete instanceof ChainEndpointLink)
 				{
+					break;
+				}
+				if(obsolete.obsolete != Link.NO_OBSOLETE)
+				{
+					obsolete = obsolete.nextLink;
 					continue;
 				}
-				if(obsoleteLink instanceof ChainEndpointLink)
-				{
-					continue;
-				}
-				obsoleteLink.obsolete = true;
-				if(obsoleteLink.nextLink != null)
-				{
-					_obsoleteLinkList.add(obsoleteLink.nextLink);
-				}
-				if(obsoleteLink.newerVersion != null)
-				{
-					_obsoleteLinkList.add(obsoleteLink.newerVersion);
-				}
+				setObsolete(obsolete);
+				obsolete = obsolete.nextLink;
 			}
-			
-			_obsoleteLinkList.clear();
-			
+					
 			return snapshot;
 		}
 		finally 
@@ -377,6 +358,9 @@ public class MultiChainList<E>
 		return new Chain<E>(this, chainName, partitions);
 	}
 	
+	/*
+	 * 
+	 */
 	protected void removeSnapshotVersion(SnapshotVersion<E> snapshotVersion)
 	{
 		if(snapshotVersion == null)
@@ -394,12 +378,38 @@ public class MultiChainList<E>
 			if(this.openSnapshotVersionList.isEmpty())
 			{
 				this.snapshotVersion = null;
-				if(waitForClean != null)
+			}
+			if(! this.obsoleteList.isEmpty())
+			{
+				long minimalSnapshotVersionToKeep = Long.MAX_VALUE -1L;
+				for( SnapshotVersion<E> usedSnapshotVersion : this.openSnapshotVersionList)
 				{
-					for(ChainEndpointLink<E> beginLinkage : waitForClean)
+					if(usedSnapshotVersion.sequence < minimalSnapshotVersionToKeep)
 					{
-						beginLinkage.cleanObsolete();
+						minimalSnapshotVersionToKeep = usedSnapshotVersion.sequence;
 					}
+				}
+				
+				Link<E> obsoleteLink;
+				while(! this.obsoleteList.isEmpty())
+				{
+					obsoleteLink = this.obsoleteList.getFirst();
+					if( minimalSnapshotVersionToKeep <= obsoleteLink.obsolete) 
+					{
+						// snapshot is created after link was mas obsolete
+						break;
+					}
+					this.obsoleteList.removeFirst();
+					
+					if(obsoleteLink.olderVersion != null)
+					{
+						obsoleteLink.olderVersion.newerVersion = obsoleteLink.newerVersion;
+					}
+					if(obsoleteLink.newerVersion != null)
+					{
+						obsoleteLink.newerVersion.newerVersion = obsoleteLink.olderVersion;
+					}
+					obsoleteLink.clear();
 				}
 			}
 		}
@@ -487,6 +497,15 @@ public class MultiChainList<E>
 	/*
 	 * Must run in write lock !!!!
 	 */
+	protected void setObsolete(Link<E> link)
+	{
+		link.obsolete = modificationVersion.sequence;
+		this.obsoleteList.addLast(link);
+	}
+	
+	/*
+	 * Must run in write lock !!!!
+	 */
 	protected Map<String,ChainsByPartition<E>> refactorLinkageDefintions(Collection<LinkageDefinition<E>> linkageDefinitions)
 	{
 		_cachedRefactoredLinkageDefinition.clear();
@@ -551,7 +570,7 @@ public class MultiChainList<E>
 		private long sequence;
 		private MultiChainList<E> multiChainList;
 		
-		private Set<ChainEndpointLink<E>> modifiedBeginLinkages;
+		//private Set<ChainEndpointLink<E>> modifiedBeginLinkages;
 		private Set<Snapshot<E>> openSnapshots;
 		
 		protected void addSnapshot(Snapshot<E> snapshot)
@@ -576,20 +595,6 @@ public class MultiChainList<E>
 			openSnapshots.remove(snapshot);
 			if(openSnapshots.isEmpty())
 			{
-				
-				if(modifiedBeginLinkages != null)
-				{
-					for(ChainEndpointLink<E> modifiedBeginLinkage : modifiedBeginLinkages)
-					{
-						if(multiChainList.waitForClean == null)
-						{
-							multiChainList.waitForClean = new HashSet<ChainEndpointLink<E>>();
-						}
-						multiChainList.waitForClean.add(modifiedBeginLinkage);
-						//modifiedBeginLinkage.versionRemoved(this);
-					}
-					modifiedBeginLinkages.clear();
-				}
 				multiChainList.removeSnapshotVersion(this);
 			}
 		}
@@ -610,14 +615,14 @@ public class MultiChainList<E>
 			return Long.compare(this.sequence, o.sequence);
 		}
 		
-		protected void addModifiedLink(ChainEndpointLink<E> beginLinkage)
+		/*protected void addModifiedLink(ChainEndpointLink<E> beginLinkage)
 		{
 			if(this.modifiedBeginLinkages == null)
 			{
 				this.modifiedBeginLinkages = new HashSet<ChainEndpointLink<E>>();
 			}
 			this.modifiedBeginLinkages.add(beginLinkage);
-		}
+		}*/
 
 		@Override
 		public int hashCode()
@@ -639,7 +644,6 @@ public class MultiChainList<E>
 		{
 			return "version: " + this.sequence 
 					+ " : open snapshots " + (this.openSnapshots == null ? "null" : this.openSnapshots.size()) 
-					+ " modified linkversion " + (this.modifiedBeginLinkages == null ? "null" : this.modifiedBeginLinkages.size())
 			;
 		}
 	}

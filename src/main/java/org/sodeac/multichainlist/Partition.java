@@ -71,7 +71,6 @@ public class Partition<E>
 		ChainEndpointLink<E> linkEnd;
 		Link<E> link;
 		LinkageDefinition<E> privateLinkageDefinition;
-		boolean isEndpoint;
 		
 		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
 		{
@@ -108,24 +107,15 @@ public class Partition<E>
 			Link<E> previewsOfPreviews = null;
 			if((prev.version != currentVersion) && (prev != linkBegin))
 			{
+				// if prev == linkBegin => chainBegin does not require new link-begin-version, 
+				// because snapshots links first payload link and current version has nothing to clean on snapshot.close()
+				
 				if(prev.version.getSequence() < currentVersion.getSequence())
 				{
 					if(! multiChainList.openSnapshotVersionList.isEmpty())
 					{
 						previewsOfPreviews = prev.previewsLink;
-						if(prev.node != null)
-						{
-							isEndpoint = ! prev.node.isPayload();
-						}
-						else
-						{
-							isEndpoint = prev instanceof ChainEndpointLink;
-						}
 						prev = prev.createNewerLink(currentVersion);
-						if(isEndpoint)
-						{
-							linkBegin = chainBegin.getLink(linkageDefinition.getChainName());
-						}
 						prev.previewsLink = previewsOfPreviews;
 					}
 				}
@@ -146,6 +136,62 @@ public class Partition<E>
 				// set new route, if previews creates a new version
 				previewsOfPreviews.nextLink = prev;
 			}
+			
+			linkBegin.incrementSize();
+			linkEnd.incrementSize();
+		}
+	}
+	
+	protected void prependNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
+	{
+		ChainEndpointLink<E> linkBegin;
+		ChainEndpointLink<E> linkEnd;
+		Link<E> link;
+		LinkageDefinition<E> privateLinkageDefinition;
+		
+		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
+		{
+			privateLinkageDefinition = privateLinkageDefinitions.get(linkageDefinition.getChainName());
+			if(privateLinkageDefinition == null)
+			{
+				privateLinkageDefinition = new LinkageDefinition<>(linkageDefinition.getChainName(), this);
+				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
+			}
+			linkageDefinition = privateLinkageDefinition;
+			linkBegin = chainBegin.getLink(linkageDefinition.getChainName());
+			if(linkBegin == null)
+			{
+				linkBegin = chainBegin.createHead(linkageDefinition, currentVersion);
+			}
+			linkEnd = chainEnd.getLink(linkageDefinition.getChainName());
+			if(linkEnd == null)
+			{
+				linkEnd = chainEnd.createHead(linkageDefinition, currentVersion);
+			}
+			if(linkBegin.nextLink == null)
+			{
+				linkBegin.nextLink = linkEnd;
+			}
+			if(linkEnd.previewsLink == null)
+			{
+				linkEnd.previewsLink = linkBegin;
+			}
+			
+			Link<E> next = linkBegin.nextLink;
+			
+			link = node.createHead(linkageDefinition, currentVersion);
+
+			// Save Water ....
+			
+			// link new link with nextlink
+			next.previewsLink = link;
+			link.nextLink = next;
+			
+			// link new link with begin link
+			link.previewsLink = linkBegin;
+			
+			// set new route
+			linkBegin.nextLink = link;
 			
 			linkBegin.incrementSize();
 			linkEnd.incrementSize();
@@ -289,12 +335,11 @@ public class Partition<E>
 		
 		protected ChainEndpointLink<E> createNewerLink(SnapshotVersion<E> currentVersion)
 		{
-			currentVersion.addModifiedLink(this);
 			ChainEndpointLink<E> newVersion = new ChainEndpointLink<>(this.linkageDefinition, this.node,currentVersion);
 			newVersion.size = size;
 			newVersion.olderVersion = this;
 			this.newerVersion = newVersion;
-			this.obsolete = true;
+			this.node.multiChainList.setObsolete(this);
 			this.node.setHead(this.linkageDefinition.getChainName(), newerVersion);
 			return newVersion;
 		}
@@ -303,57 +348,6 @@ public class Partition<E>
 		public String toString()
 		{
 			return super.toString() + " size " + size;
-		}
-		
-		/*
-		 * Must run in write lock !!!!
-		 */
-		protected void cleanObsolete()
-		{
-			_todoList.clear();
-			
-			if(super.olderVersion != null)
-			{
-				_todoList.add(super.olderVersion);
-				super.olderVersion = null;
-			}
-			
-			if((super.nextLink != null) && (!(super.nextLink instanceof ChainEndpointLink)))
-			{
-				_todoList.add(super.nextLink);
-			}
-			
-			while(! _todoList.isEmpty())
-			{
-				Link<E> link = _todoList.removeFirst();
-				if(link.olderVersion != null)
-				{
-					_todoList.addLast(link.olderVersion);
-				}
-				if(link.nextLink != null)
-				{
-					if(!(link.nextLink instanceof ChainEndpointLink))
-					{
-						_todoList.add(link.nextLink);
-					}
-				}
-				if(link.obsolete)
-				{
-					if(link.node != null)
-					{
-						if(link.olderVersion != null)
-						{
-							link.olderVersion.newerVersion = link.newerVersion;
-						}
-						if(link.newerVersion != null)
-						{
-							link.newerVersion.newerVersion = link.olderVersion;
-						}
-						link.clear();
-					}
-				}
-				
-			}
 		}
 	}
 	

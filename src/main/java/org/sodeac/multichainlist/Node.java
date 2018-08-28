@@ -218,52 +218,46 @@ public class Node<E>
 		SnapshotVersion<E> currentVersion = partition.multiChainList.getModificationVersion();
 		ChainEndpointLink<E> linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
 		ChainEndpointLink<E> linkEnd = partition.getChainEnd().getLink(link.linkageDefinition.getChainName());
-		boolean createNewVersion = false;
 		boolean isEndpoint;
 		
 		Link<E> prev = link.previewsLink;
 		Link<E> next = link.nextLink;
-		link.obsolete = true;
 		
 		Link<E> nextOfNext = null;
 		Link<E> previewsOfPreviews = null;
-		if((prev.version != currentVersion) || (next.version != currentVersion))
+		if(next != linkEnd)
 		{
-			if(next != linkEnd)
-			{
-				if(next.version.getSequence() < currentVersion.getSequence())
-				{
-					if(! multiChainList.openSnapshotVersionList.isEmpty())
-					{
-						nextOfNext = next.nextLink;
-						next = next.createNewerLink(currentVersion);
-						next.nextLink = nextOfNext;
-						nextOfNext.previewsLink = next;
-						createNewVersion = true;
-					}
-				}
-			}
-			if(prev.version.getSequence() < currentVersion.getSequence())
+			if(next.version.getSequence() < currentVersion.getSequence())
 			{
 				if(! multiChainList.openSnapshotVersionList.isEmpty())
 				{
-					previewsOfPreviews = prev.previewsLink;
-					if(prev.node != null)
-					{
-						isEndpoint = ! prev.node.isPayload();
-					}
-					else
-					{
-						isEndpoint = prev instanceof ChainEndpointLink;
-					}
-					prev = prev.createNewerLink(currentVersion);
-					if(isEndpoint)
-					{
-						linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
-					}
-					prev.previewsLink = previewsOfPreviews;
-					createNewVersion = true;
+					nextOfNext = next.nextLink;
+					next = next.createNewerLink(currentVersion);
+					next.nextLink = nextOfNext;
+					nextOfNext.previewsLink = next;
 				}
+			}
+		}
+		
+		if(prev.version.getSequence() < currentVersion.getSequence())
+		{
+			if(! multiChainList.openSnapshotVersionList.isEmpty())
+			{
+				previewsOfPreviews = prev.previewsLink;
+				if(prev.node != null)
+				{
+					isEndpoint = ! prev.node.isPayload();
+				}
+				else
+				{
+					isEndpoint = prev instanceof ChainEndpointLink;
+				}
+				prev = prev.createNewerLink(currentVersion);
+				if(isEndpoint)
+				{
+					linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
+				}
+				prev.previewsLink = previewsOfPreviews;
 			}
 		}
 		
@@ -281,13 +275,13 @@ public class Node<E>
 		
 		String chainName = link.linkageDefinition.getChainName();
 		
-		if(createNewVersion || (link.olderVersion != null))
+		if(multiChainList.openSnapshotVersionList.isEmpty())
 		{
-			currentVersion.addModifiedLink(linkBegin);
+			link.clear();
 		}
 		else
 		{
-			link.clear();
+			multiChainList.setObsolete(link);
 		}
 		
 		linkBegin.decrementSize();

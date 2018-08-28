@@ -11,10 +11,10 @@
 package org.sodeac.multichainlist;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
-import org.sodeac.multichainlist.Partition.ChainEndpointLink;
 
 public class Link<E>
 {
+	public static final long NO_OBSOLETE = -1L;
 	public Link(LinkageDefinition<E> linkageDefinition, Node<E> node, SnapshotVersion<E> version)
 	{
 		super();
@@ -24,7 +24,7 @@ public class Link<E>
 		this.version = version;
 	}
 	
-	protected volatile boolean obsolete = false;
+	protected volatile long obsolete = NO_OBSOLETE;
 	protected volatile LinkageDefinition<E> linkageDefinition;
 	protected volatile Node<E> node;
 	protected volatile E element;
@@ -36,12 +36,10 @@ public class Link<E>
 	
 	protected Link<E> createNewerLink(SnapshotVersion<E> currentVersion)
 	{
-		ChainEndpointLink<E> chainEndpointLinkage = linkageDefinition.getPartition().getChainBegin().getLink(linkageDefinition.getChainName());
-		currentVersion.addModifiedLink(chainEndpointLinkage);
 		Link<E> newVersion = new Link<>(this.linkageDefinition, this.node,currentVersion);
 		newVersion.olderVersion = this;
 		this.newerVersion = newVersion;
-		this.obsolete = true;
+		this.node.multiChainList.setObsolete(this);
 		this.node.setHead(this.linkageDefinition.getChainName(), newVersion);
 		return newVersion;
 	}

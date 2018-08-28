@@ -353,6 +353,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 				return false;
 			}
 			
+			// TODO vereinheitlichen
 			if(this.next.version.getSequence() > Snapshot.this.version.getSequence())
 			{
 				while(this.next.version.getSequence() > Snapshot.this.version.getSequence())

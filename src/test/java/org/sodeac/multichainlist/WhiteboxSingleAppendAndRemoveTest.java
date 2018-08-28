@@ -44,7 +44,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", link1S1, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -56,7 +56,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertSame("Link1S1.next should be correct", endLink,link1S1.nextLink);
 		assertSame("Link1S1.prev should be correct", beginLink1,link1S1.previewsLink);
-		assertFalse("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertFalse("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertSame("Link1S1 should should be correct",node1.headOfDefaultChain,link1S1);
 		assertEquals("Link1S1.element should be correct", "1",link1S1.element);
 		assertEquals("Link1S1.version should be correct", 0L, link1S1.version.getSequence());
@@ -68,7 +68,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", link1S1 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -90,7 +90,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", endLink, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -101,7 +101,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertNull("Link1S1.next should be correct", link1S1.nextLink);
 		assertNull("Link1S1.prev should be correct", link1S1.previewsLink);
-		assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertNull("Node1.defaultChainLinkage should should be correct",node1.headOfDefaultChain);
 		assertNull("Link1S1.element should be correct", link1S1.element);
 		assertNull("Link1S1.version should be correct", link1S1.version);
@@ -112,7 +112,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", beginLink2 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -155,7 +155,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", link1S1, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -167,7 +167,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertSame("Link1S1.next should be correct", endLink,link1S1.nextLink);
 		assertSame("Link1S1.prev should be correct", beginLink1,link1S1.previewsLink);
-		assertFalse("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertFalse("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertSame("Link1S1 should should be correct",node1.headOfDefaultChain,link1S1);
 		assertEquals("Link1S1.element should be correct", "1",link1S1.element);
 		assertEquals("Link1S1.version should be correct", 0L, link1S1.version.getSequence());
@@ -179,7 +179,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", link1S1 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -207,7 +207,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertSame("BeginLink.newerVersion should be correct",beginLink2,beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", link1S1, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -218,7 +218,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertSame("Link1S1.next should be correct", endLink,link1S1.nextLink);
 		assertSame("Link1S1.prev should be correct", beginLink1,link1S1.previewsLink);
-		assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertNull("Node1.defaultChainLinkage should should be correct",node1.headOfDefaultChain);
 		assertEquals("Link1S1.element should be correct", "1",link1S1.element);
 		assertEquals("Link1S1.version should be correct", 0L, link1S1.version.getSequence());
@@ -229,7 +229,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", beginLink2 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -241,7 +241,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink2.newerVersion);
 		assertSame("BeginLink.next should be correct", endLink, beginLink2.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink2.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
 		assertNotSame("BeginLink should should be correct",begin,beginLink2);
 		assertNull("BeginLink.element should be correct", beginLink2.element);
 		assertEquals("BeginLink.version should be correct", 1L, beginLink2.version.getSequence());
@@ -257,7 +257,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertSame("BeginLink.newerVersion should be correct",beginLink2,beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", link1S1, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -268,7 +268,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertSame("Link1S1.next should be correct", endLink,link1S1.nextLink);
 		assertSame("Link1S1.prev should be correct", beginLink1,link1S1.previewsLink);
-		assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertNull("Node1.defaultChainLinkage should should be correct",node1.headOfDefaultChain);
 		assertEquals("Link1S1.element should be correct", "1",link1S1.element);
 		assertEquals("Link1S1.version should be correct", 0L, link1S1.version.getSequence());
@@ -279,7 +279,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", beginLink2 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -291,7 +291,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink2.newerVersion);
 		assertSame("BeginLink.next should be correct", endLink, beginLink2.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink2.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
 		assertNotSame("BeginLink should should be correct",begin,beginLink2);
 		assertNull("BeginLink.element should be correct", beginLink2.element);
 		assertEquals("BeginLink.version should be correct", 1L, beginLink2.version.getSequence());
@@ -307,7 +307,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink1.newerVersion);
 		assertNull("BeginLink.next should be correct", beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertNull("BeginLink.linkdef should should be correct",beginLink1.linkageDefinition);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertNull("BeginLink.version should be correct", beginLink1.version);
@@ -318,7 +318,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertNull("Link1S1.next should be correct", link1S1.nextLink);
 		assertNull("Link1S1.prev should be correct", link1S1.previewsLink);
-		assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertNull("Node1.defaultChainLinkage should should be correct",node1.headOfDefaultChain);
 		assertNull("Link1S1.element should be correct", link1S1.element);
 		assertNull("Link1S1.version should be correct", link1S1.version);
@@ -358,7 +358,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", link1S1, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -370,7 +370,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertSame("Link1S1.next should be correct", endLink,link1S1.nextLink);
 		assertSame("Link1S1.prev should be correct", beginLink1,link1S1.previewsLink);
-		assertFalse("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertFalse("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertSame("Link1S1 should should be correct",node1.headOfDefaultChain,link1S1);
 		assertEquals("Link1S1.element should be correct", "1",link1S1.element);
 		assertEquals("Link1S1.version should be correct", 0L, link1S1.version.getSequence());
@@ -382,7 +382,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", link1S1 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -411,7 +411,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertSame("BeginLink.newerVersion should be correct",beginLink2,beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", link1S1, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -422,7 +422,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertSame("Link1S1.next should be correct", endLink,link1S1.nextLink);
 		assertSame("Link1S1.prev should be correct", beginLink1,link1S1.previewsLink);
-		assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertNull("Node1.defaultChainLinkage should should be correct",node1.headOfDefaultChain);
 		assertEquals("Link1S1.element should be correct", "1",link1S1.element);
 		assertEquals("Link1S1.version should be correct", 0L, link1S1.version.getSequence());
@@ -433,7 +433,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", beginLink2 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -445,7 +445,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink2.newerVersion);
 		assertSame("BeginLink.next should be correct", endLink, beginLink2.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink2.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
 		assertNotSame("BeginLink should should be correct",begin,beginLink2);
 		assertNull("BeginLink.element should be correct", beginLink2.element);
 		assertEquals("BeginLink.version should be correct", 1L, beginLink2.version.getSequence());
@@ -462,7 +462,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertSame("BeginLink.newerVersion should be correct",beginLink2,beginLink1.newerVersion);
 		assertSame("BeginLink.next should be correct", link1S1, beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertSame("BeginLink should should be correct",begin,beginLink1);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertEquals("BeginLink.version should be correct", 0L, beginLink1.version.getSequence());
@@ -473,7 +473,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertSame("Link1S1.next should be correct", endLink,link1S1.nextLink);
 		assertSame("Link1S1.prev should be correct", beginLink1,link1S1.previewsLink);
-		assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertNull("Node1.defaultChainLinkage should should be correct",node1.headOfDefaultChain);
 		assertEquals("Link1S1.element should be correct", "1",link1S1.element);
 		assertEquals("Link1S1.version should be correct", 0L, link1S1.version.getSequence());
@@ -484,7 +484,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("EndLink.newerVersion should be correct",endLink.newerVersion);
 		assertNull("EndLink.next should be correct", endLink.nextLink);
 		assertSame("EndLink.prev should be correct", beginLink2 ,endLink.previewsLink);
-		assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
+		// TODO assertFalse("EndLink.obsolete should should be correct",endLink.obsolete);
 		assertSame("EndLink should should be correct",end,endLink);
 		assertNull("EndLink.element should be correct", endLink.element);
 		assertEquals("EndLink.version should be correct", 0L, endLink.version.getSequence());
@@ -496,7 +496,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink2.newerVersion);
 		assertSame("BeginLink.next should be correct", endLink, beginLink2.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink2.previewsLink);
-		assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
+		// TODO assertFalse("BeginLink.obsolete should should be correct",beginLink2.obsolete);
 		assertNotSame("BeginLink should should be correct",begin,beginLink2);
 		assertNull("BeginLink.element should be correct", beginLink2.element);
 		assertEquals("BeginLink.version should be correct", 1L, beginLink2.version.getSequence());
@@ -512,7 +512,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("BeginLink.newerVersion should be correct",beginLink1.newerVersion);
 		assertNull("BeginLink.next should be correct", beginLink1.nextLink);
 		assertNull("BeginLink.prev should be correct", beginLink1.previewsLink);
-		assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
+		// TODO assertTrue("BeginLink.obsolete should should be correct",beginLink1.obsolete);
 		assertNull("BeginLink.linkdef should should be correct",beginLink1.linkageDefinition);
 		assertNull("BeginLink.element should be correct", beginLink1.element);
 		assertNull("BeginLink.version should be correct", beginLink1.version);
@@ -523,7 +523,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		assertNull("Link1S1.newerVersion should be correct",link1S1.newerVersion);
 		assertNull("Link1S1.next should be correct", link1S1.nextLink);
 		assertNull("Link1S1.prev should be correct", link1S1.previewsLink);
-		assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
+		// TODO assertTrue("Link1S1.obsolete should should be correct",link1S1.obsolete);
 		assertNull("Node1.defaultChainLinkage should should be correct",node1.headOfDefaultChain);
 		assertNull("Link1S1.element should be correct", link1S1.element);
 		assertNull("Link1S1.version should be correct", link1S1.version);
