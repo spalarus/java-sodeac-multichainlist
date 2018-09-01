@@ -19,6 +19,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
+import org.sodeac.multichainlist.Node.Link;
 
 public class Partition<E>
 {
@@ -27,8 +28,8 @@ public class Partition<E>
 		super();
 		this.name = name;
 		this.multiChainList = multiChainList;
-		this.chainBegin = new ChainEndpoint();
-		this.chainEnd = new ChainEndpoint();
+		this.partitionBegin = new Bollard();
+		this.partitionEnd = new Bollard();
 		this.privateLinkageDefinitions = new HashMap<String,LinkageDefinition<E>>();
 	}
 	
@@ -36,8 +37,8 @@ public class Partition<E>
 	protected MultiChainList<E> multiChainList;
 	protected volatile Partition<E> previews = null;
 	protected volatile Partition<E> next = null;
-	protected ChainEndpoint chainBegin = null;
-	protected ChainEndpoint chainEnd = null;
+	protected Bollard partitionBegin = null;
+	protected Bollard partitionEnd = null;
 	private Map<String,LinkageDefinition<E>> privateLinkageDefinitions = null;
 	
 	public String getName()
@@ -55,20 +56,20 @@ public class Partition<E>
 		return next;
 	}
 	
-	protected ChainEndpoint getChainBegin()
+	protected Bollard getPartitionBegin()
 	{
-		return chainBegin;
+		return partitionBegin;
 	}
 
-	protected ChainEndpoint getChainEnd()
+	protected Bollard getPartitionEnd()
 	{
-		return chainEnd;
+		return partitionEnd;
 	}
 
 	protected void appendNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
 	{
-		ChainEndpointLink<E> linkBegin;
-		ChainEndpointLink<E> linkEnd;
+		Eyebolt<E> linkBegin;
+		Eyebolt<E> linkEnd;
 		Link<E> link;
 		LinkageDefinition<E> privateLinkageDefinition;
 		
@@ -81,15 +82,15 @@ public class Partition<E>
 				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
 			}
 			linkageDefinition = privateLinkageDefinition;
-			linkBegin = chainBegin.getLink(linkageDefinition.getChainName());
+			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
 			if(linkBegin == null)
 			{
-				linkBegin = chainBegin.createHead(linkageDefinition, currentVersion);
+				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion);
 			}
-			linkEnd = chainEnd.getLink(linkageDefinition.getChainName());
+			linkEnd = partitionEnd.getLink(linkageDefinition.getChainName());
 			if(linkEnd == null)
 			{
-				linkEnd = chainEnd.createHead(linkageDefinition, currentVersion);
+				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion);
 			}
 			if(linkBegin.nextLink == null)
 			{
@@ -144,8 +145,8 @@ public class Partition<E>
 	
 	protected void prependNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
 	{
-		ChainEndpointLink<E> linkBegin;
-		ChainEndpointLink<E> linkEnd;
+		Eyebolt<E> linkBegin;
+		Eyebolt<E> linkEnd;
 		Link<E> link;
 		LinkageDefinition<E> privateLinkageDefinition;
 		
@@ -158,15 +159,15 @@ public class Partition<E>
 				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
 			}
 			linkageDefinition = privateLinkageDefinition;
-			linkBegin = chainBegin.getLink(linkageDefinition.getChainName());
+			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
 			if(linkBegin == null)
 			{
-				linkBegin = chainBegin.createHead(linkageDefinition, currentVersion);
+				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion);
 			}
-			linkEnd = chainEnd.getLink(linkageDefinition.getChainName());
+			linkEnd = partitionEnd.getLink(linkageDefinition.getChainName());
 			if(linkEnd == null)
 			{
-				linkEnd = chainEnd.createHead(linkageDefinition, currentVersion);
+				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion);
 			}
 			if(linkBegin.nextLink == null)
 			{
@@ -203,7 +204,7 @@ public class Partition<E>
 		multiChainList.getReadLock().lock();
 		try
 		{
-			ChainEndpointLink<E> beginLink = chainBegin.getLink(chainName);
+			Eyebolt<E> beginLink = partitionBegin.getLink(chainName);
 			return beginLink == null ? 0 : (int)beginLink.size;
 		}
 		finally 
@@ -217,7 +218,7 @@ public class Partition<E>
 		multiChainList.getReadLock().lock();
 		try
 		{
-			ChainEndpointLink<E> beginLink = chainBegin.getLink(chainName);
+			Eyebolt<E> beginLink = partitionBegin.getLink(chainName);
 			if(beginLink == null)
 			{
 				throw new NoSuchElementException();
@@ -239,7 +240,7 @@ public class Partition<E>
 		multiChainList.getReadLock().lock();
 		try
 		{
-			ChainEndpointLink<E> endLink = chainEnd.getLink(chainName);
+			Eyebolt<E> endLink = partitionEnd.getLink(chainName);
 			if(endLink == null)
 			{
 				throw new NoSuchElementException();
@@ -271,9 +272,9 @@ public class Partition<E>
 		}
 	}
 	
-	protected class ChainEndpoint extends Node<E>
+	protected class Bollard extends Node<E>
 	{
-		protected ChainEndpoint()
+		protected Bollard()
 		{
 			super(null,Partition.this.multiChainList);
 		}
@@ -290,28 +291,27 @@ public class Partition<E>
 		}
 
 		@Override
-		protected ChainEndpointLink<E> getLink(String chainName)
+		protected Eyebolt<E> getLink(String chainName)
 		{
-			return (ChainEndpointLink<E>)super.getLink(chainName);
+			return (Eyebolt<E>)super.getLink(chainName);
 		}
 
 		@Override
-		protected ChainEndpointLink<E> createHead(LinkageDefinition<E> linkageDefinition, SnapshotVersion<E> currentVersion)
+		protected Eyebolt<E> createHead(LinkageDefinition<E> linkageDefinition, SnapshotVersion<E> currentVersion)
 		{
-			Link<E> link = new ChainEndpointLink<E>(linkageDefinition, this, currentVersion);
-			return (ChainEndpointLink<E>)super.setHead(linkageDefinition.getChainName(), link);
+			Link<E> link = new Eyebolt<E>(linkageDefinition, this, currentVersion);
+			return (Eyebolt<E>)super.setHead(linkageDefinition.getChainName(), link);
 		}
 	}
 
-	protected static class ChainEndpointLink<E> extends Link<E>
+	protected static class Eyebolt<E> extends Link<E>
 	{
-		protected ChainEndpointLink(LinkageDefinition<E> linkageDefinition, Node<E> parent, SnapshotVersion<E> currentVersion)
+		protected Eyebolt(LinkageDefinition<E> linkageDefinition, Node<E> parent, SnapshotVersion<E> currentVersion)
 		{
 			super(linkageDefinition, parent, currentVersion);
 		}
 		
 		private long size = 0;
-		LinkedList<Link<E>> _todoList = new LinkedList<Link<E>>();
 		
 		protected long getSize()
 		{
@@ -333,9 +333,9 @@ public class Partition<E>
 			return --size;
 		}
 		
-		protected ChainEndpointLink<E> createNewerLink(SnapshotVersion<E> currentVersion)
+		protected Eyebolt<E> createNewerLink(SnapshotVersion<E> currentVersion)
 		{
-			ChainEndpointLink<E> newVersion = new ChainEndpointLink<>(this.linkageDefinition, this.node,currentVersion);
+			Eyebolt<E> newVersion = new Eyebolt<>(this.linkageDefinition, this.node,currentVersion);
 			newVersion.size = size;
 			newVersion.olderVersion = this;
 			this.newerVersion = newVersion;
@@ -403,7 +403,7 @@ public class Partition<E>
 		try
 		{
 			StringBuilder builder = new StringBuilder();
-			ChainEndpointLink<E> chainEndpointLink = getChainBegin().getLink(chainName);
+			Eyebolt<E> chainEndpointLink = getPartitionBegin().getLink(chainName);
 			if(chainEndpointLink == null)
 			{
 				builder.append("Chain " + chainName + " not found");
@@ -419,7 +419,7 @@ public class Partition<E>
 			{
 				
 				
-				if(!(chainEndpointLink.nextLink instanceof ChainEndpointLink))
+				if(!(chainEndpointLink.nextLink instanceof Eyebolt))
 				{
 					builder.append("ChainBegin-HEAD(" + Integer.toHexString(chainEndpointLink.hashCode())+ ").nextLink / open versions: ( ");
 				}
@@ -449,7 +449,7 @@ public class Partition<E>
 					todoList.add(olderBegin);
 					handled.add(olderBegin);
 				}
-				if((olderBegin.nextLink != null) && (!(olderBegin.nextLink instanceof ChainEndpointLink)))
+				if((olderBegin.nextLink != null) && (!(olderBegin.nextLink instanceof Eyebolt)))
 				{
 					builder.append("\tOlder ChainBegin.nextLink " + Integer.toHexString(olderBegin.nextLink.hashCode()) + "\n");
 					if(! handled.contains(olderBegin.nextLink))
@@ -463,7 +463,7 @@ public class Partition<E>
 			
 			if((chainEndpointLink.nextLink != null))
 			{
-				if(!(chainEndpointLink.nextLink instanceof ChainEndpointLink))
+				if(!(chainEndpointLink.nextLink instanceof Eyebolt))
 				{
 					if(! handled.contains(chainEndpointLink.nextLink))
 					{
@@ -478,7 +478,7 @@ public class Partition<E>
 			{
 				Link<E> link = todoList.removeFirst();
 				boolean isCleared = link == null;
-				boolean isEndpoint = link instanceof ChainEndpointLink;
+				boolean isEndpoint = link instanceof Eyebolt;
 				
 				builder.append("Analyse Link " + Integer.toHexString(link.hashCode()) + " - obsolete: " +  link.obsolete + " - cleared " + isCleared + " - endpoint: " + isEndpoint + " - value: " + link.getElement() + "\n");
 				if(link.olderVersion != null)
@@ -501,7 +501,7 @@ public class Partition<E>
 				}
 				if(link.nextLink != null)
 				{
-					if(!(link.nextLink instanceof ChainEndpointLink))
+					if(!(link.nextLink instanceof Eyebolt))
 					{
 						builder.append("\tnext: " + Integer.toHexString(link.nextLink.hashCode()) + "\n");
 						if(! handled.contains(link.nextLink))
@@ -518,7 +518,7 @@ public class Partition<E>
 				}
 				if(link.previewsLink != null)
 				{
-					if(!(link.previewsLink instanceof ChainEndpointLink))
+					if(!(link.previewsLink instanceof Eyebolt))
 					{
 						builder.append("\tprev: " + Integer.toHexString(link.previewsLink.hashCode()) + "\n");
 						if(! handled.contains(link.previewsLink))

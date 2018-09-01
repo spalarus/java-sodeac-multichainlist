@@ -10,6 +10,7 @@ import java.util.List;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.sodeac.multichainlist.Node.Link;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class DefaultTest

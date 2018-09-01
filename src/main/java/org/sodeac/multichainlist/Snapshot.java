@@ -16,7 +16,8 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
-import org.sodeac.multichainlist.Partition.ChainEndpointLink;
+import org.sodeac.multichainlist.Node.Link;
+import org.sodeac.multichainlist.Partition.Eyebolt;
 
 public class Snapshot<E> implements AutoCloseable, Collection<E>
 {
@@ -39,7 +40,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		this.partition = partition;
 		this.parent = parent;
 		this.chainName = chainName;
-		ChainEndpointLink<E> beginLink = this.partition.getChainBegin().getLink(this.chainName);
+		Eyebolt<E> beginLink = this.partition.getPartitionBegin().getLink(this.chainName);
 		if(beginLink == null)
 		{
 			firstLink = null;
@@ -50,7 +51,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 			firstLink = beginLink.nextLink;
 			this.size = beginLink.getSize();
 		}
-		ChainEndpointLink<E> endLink = this.partition.getChainEnd().getLink(this.chainName) ; 
+		Eyebolt<E> endLink = this.partition.getPartitionEnd().getLink(this.chainName) ; 
 		lastLink = endLink == null ? null : endLink.previewsLink;
 	}
 	
@@ -66,6 +67,11 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 	protected MultiChainList<E> getParent()
 	{
 		return parent;
+	}
+
+	public String getChainName()
+	{
+		return chainName;
 	}
 
 	@Override
@@ -104,6 +110,18 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return null;
 	}
 	
+	public Node<E> getNode(Object o)
+	{
+		for(Link<E> element : this.linkIterable())
+		{
+			if(element.node.getElement() == o)
+			{
+				return element.node;
+			}
+		}
+		return null;
+	}
+	
 	@Override
 	public Iterator<E> iterator()
 	{
@@ -114,7 +132,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return new ElementSnapshotIterator();
 	}
 	
-	public Iterable<Link<E>> linkIterable()
+	protected Iterable<Link<E>> linkIterable()
 	{
 		if(closed)
 		{
@@ -124,7 +142,22 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		{
 			 public Iterator<Link<E>> iterator()
 			 {
-				 return new LinkVersionSnapshotIterator();
+				 return new LinkSnapshotIterator();
+			 }
+		} ;
+	}
+	
+	public Iterable<Node<E>> nodeIterable()
+	{
+		if(closed)
+		{
+			throw new RuntimeException("snapshot is closed");
+		}
+		return new Iterable<Node<E>>()
+		{
+			 public Iterator<Node<E>> iterator()
+			 {
+				 return new NodeSnapshotIterator();
 			 }
 		} ;
 	}
@@ -261,13 +294,22 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return firstLink.element;
 	}
 
-	public Link<E> getFirstLink()
+	protected Link<E> getFirstLink()
 	{
 		if(this.closed)
 		{
 			throw new RuntimeException("snapshot is closed");
 		}
 		return this.firstLink;
+	}
+	
+	public Node<E> getFirstNode()
+	{
+		if(this.closed)
+		{
+			throw new RuntimeException("snapshot is closed");
+		}
+		return this.firstLink == null ? null : this.firstLink.node;
 	}
 	
 	public E getLastElement()
@@ -280,7 +322,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return lastLink.element;
 	}
 
-	public Link<E> getLastLink()
+	protected Link<E> getLastLink()
 	{
 		if(this.closed)
 		{
@@ -289,13 +331,32 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return this.lastLink;
 	}
 	
-	private class LinkVersionSnapshotIterator extends SnapshotIterator implements Iterator<Link<E>>
+	public Node<E> getLastNode()
+	{
+		if(this.closed)
+		{
+			throw new RuntimeException("snapshot is closed");
+		}
+		return this.lastLink == null ? null : this.lastLink.node;
+	}
+	
+	private class LinkSnapshotIterator extends SnapshotIterator implements Iterator<Link<E>>
 	{
 		
 		@Override
 		public Link<E> next()
 		{
 			return super.nextLink();
+		}
+	}
+	
+	private class NodeSnapshotIterator extends SnapshotIterator implements Iterator<Node<E>>
+	{
+		
+		@Override
+		public Node<E> next()
+		{
+			return super.nextLink().node;
 		}
 	}
 	
@@ -353,7 +414,6 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 				return false;
 			}
 			
-			// TODO vereinheitlichen
 			if(this.next.version.getSequence() > Snapshot.this.version.getSequence())
 			{
 				while(this.next.version.getSequence() > Snapshot.this.version.getSequence())

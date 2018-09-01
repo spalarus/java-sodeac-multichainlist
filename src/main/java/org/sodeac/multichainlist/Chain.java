@@ -15,7 +15,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.sodeac.multichainlist.Partition.ChainEndpointLink;
+import org.sodeac.multichainlist.MultiChainList.ClearChainLink;
+import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
+import org.sodeac.multichainlist.Node.Link;
+import org.sodeac.multichainlist.Partition.Eyebolt;
 
 public class Chain<E>
 {
@@ -47,9 +50,14 @@ public class Chain<E>
 		return (Partition<E>[])allPartitions;
 	}
 	
-	public Snapshot<E> createSnapshot()
+	public Snapshot<E> createImmutableSnapshot()
 	{
-		return new ChainSnapshot<E>(this);
+		return new ChainSnapshot<E>(this, false);
+	}
+	
+	public Snapshot<E> createImmutableSnapshotPoll()
+	{
+		return new ChainSnapshot<E>(this, true);
 	}
 	
 	private static class ChainSnapshot<E> extends Snapshot<E>
@@ -57,7 +65,7 @@ public class Chain<E>
 		private List<Snapshot<E>> partitionSnapshots = null;
 		private Chain<E> chain = null;
 		
-		private ChainSnapshot(Chain<E> chain)
+		private ChainSnapshot(Chain<E> chain, boolean poll)
 		{
 			super(chain.multiChainList);
 			
@@ -69,18 +77,21 @@ public class Chain<E>
 			this.chain.multiChainList.writeLock.lock();
 			try
 			{
+				
 				if(this.chain.multiChainList.snapshotVersion == null)
 				{
 					this.chain.multiChainList.snapshotVersion = this.chain.multiChainList.modificationVersion;
 					this.chain.multiChainList.openSnapshotVersionList.add(this.chain.multiChainList.snapshotVersion);
 				}
 				super.version = this.chain.multiChainList.snapshotVersion;
+				super.version.addSnapshot(this);
 				
+				SnapshotVersion<E> modificationVersion = null;
 				for(int i = 0; i < partitions.length;  i++)
 				{
 					Partition<E> partition = partitions[i];
-					ChainEndpointLink<E> beginLinkage = partition.getChainBegin().getLink(this.chain.chainName);
-					if((beginLinkage == null) || (beginLinkage.getSize() == 0))
+					Eyebolt<E> beginLink = partition.getPartitionBegin().getLink(this.chain.chainName);
+					if((beginLink == null) || (beginLink.getSize() == 0))
 					{
 						continue;
 					}
@@ -97,9 +108,26 @@ public class Chain<E>
 						super.lastLink = snapshot.lastLink;
 					}
 					this.partitionSnapshots.add(snapshot);
+					
+					if(poll)
+					{
+						if(modificationVersion == null)
+						{
+							modificationVersion = this.chain.multiChainList.getModificationVersion();
+						}
+						
+						Eyebolt<E> endLink = partition.getPartitionEnd().getLink(this.chain.chainName);
+						beginLink = beginLink.createNewerLink(modificationVersion);
+						endLink.previewsLink = beginLink;
+						beginLink.nextLink = endLink;
+						beginLink.setSize(0);
+						endLink.setSize(0);
+						if(beginLink.olderVersion.nextLink != null)
+						{
+							chain.multiChainList.setObsolete(new ClearChainLink<E>(beginLink.olderVersion.nextLink));
+						}
+					}
 				}
-				
-				super.version.addSnapshot(this);
 			}
 			finally 
 			{

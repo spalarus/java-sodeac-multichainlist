@@ -18,7 +18,7 @@ import java.util.Map.Entry;
 
 import org.sodeac.multichainlist.MultiChainList.ChainsByPartition;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
-import org.sodeac.multichainlist.Partition.ChainEndpointLink;
+import org.sodeac.multichainlist.Partition.Eyebolt;
 
 public class Node<E>
 {
@@ -216,8 +216,8 @@ public class Node<E>
 		
 		Partition<E> partition = link.linkageDefinition.getPartition();
 		SnapshotVersion<E> currentVersion = partition.multiChainList.getModificationVersion();
-		ChainEndpointLink<E> linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
-		ChainEndpointLink<E> linkEnd = partition.getChainEnd().getLink(link.linkageDefinition.getChainName());
+		Eyebolt<E> linkBegin = partition.getPartitionBegin().getLink(link.linkageDefinition.getChainName());
+		Eyebolt<E> linkEnd = partition.getPartitionEnd().getLink(link.linkageDefinition.getChainName());
 		boolean isEndpoint;
 		
 		Link<E> prev = link.previewsLink;
@@ -250,12 +250,12 @@ public class Node<E>
 				}
 				else
 				{
-					isEndpoint = prev instanceof ChainEndpointLink;
+					isEndpoint = prev instanceof Eyebolt;
 				}
 				prev = prev.createNewerLink(currentVersion);
 				if(isEndpoint)
 				{
-					linkBegin = partition.getChainBegin().getLink(link.linkageDefinition.getChainName());
+					linkBegin = partition.getPartitionBegin().getLink(link.linkageDefinition.getChainName());
 				}
 				prev.previewsLink = previewsOfPreviews;
 			}
@@ -354,5 +354,97 @@ public class Node<E>
 	public String toString()
 	{
 		return "Node payload: " + isPayload() ;
+	}
+	
+	protected static class Link<E>
+	{
+		public static final long NO_OBSOLETE = -1L;
+		protected Link(LinkageDefinition<E> linkageDefinition, Node<E> node, SnapshotVersion<E> version)
+		{
+			super();
+			this.linkageDefinition = linkageDefinition;
+			this.node = node;
+			this.element = node.element;
+			this.version = version;
+		}
+		
+		protected Link()
+		{
+			super();
+			this.linkageDefinition = null;
+			this.node = null;
+			this.element = null;
+			this.version = null;
+		}
+		
+		protected volatile long obsolete = NO_OBSOLETE;
+		protected volatile LinkageDefinition<E> linkageDefinition;
+		protected volatile Node<E> node;
+		protected volatile E element;
+		protected volatile SnapshotVersion<E> version;
+		protected volatile Link<E> newerVersion= null;
+		protected volatile Link<E> olderVersion= null;
+		protected volatile Link<E> previewsLink= null;
+		protected volatile Link<E> nextLink = null;
+		
+		protected Link<E> createNewerLink(SnapshotVersion<E> currentVersion)
+		{
+			Link<E> newVersion = new Link<>(this.linkageDefinition, this.node,currentVersion);
+			newVersion.olderVersion = this;
+			this.newerVersion = newVersion;
+			this.node.multiChainList.setObsolete(this);
+			this.node.setHead(this.linkageDefinition.getChainName(), newVersion);
+			return newVersion;
+		}
+		
+		public E getElement()
+		{
+			return element;
+		}
+		
+		public Node<E> getNode()
+		{
+			return node;
+		}
+		
+		public boolean unlink()
+		{
+			LinkageDefinition<E> linkage = this.linkageDefinition;
+			Node<E> node = this.node;
+			if(linkage == null)
+			{
+				return false;
+			}
+			if(node == null)
+			{
+				return false;
+			}
+			return node.unlink(linkage.getChainName());
+		}
+
+		protected void clear()
+		{
+			this.linkageDefinition = null;
+			this.version = null;
+			this.newerVersion = null;
+			this.olderVersion = null;
+			this.previewsLink = null;
+			this.nextLink = null;
+			this.node = null;
+			this.element = null;
+		}
+		
+		@Override
+		public String toString()
+		{
+			return
+			node == null ? "link-version cleared away" : 
+			(
+				"lVersion " + this.version.getSequence() 
+					+ " hasNewer: " + (newerVersion != null) 
+					+ " hasOlder: " + (olderVersion != null)
+			);
+		}
+		
 	}
 }

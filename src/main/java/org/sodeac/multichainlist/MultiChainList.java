@@ -26,7 +26,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.sodeac.multichainlist.Partition.ChainEndpointLink;
+import org.sodeac.multichainlist.Node.Link;
+import org.sodeac.multichainlist.Partition.Eyebolt;
 
 public class MultiChainList<E>
 {
@@ -263,8 +264,13 @@ public class MultiChainList<E>
 		}
 	}
 	
-	
+	@Deprecated
 	public Snapshot<E> createImmutableSnapshotAndClearChain(String chainName,String partitionName)
+	{
+		return createImmutableSnapshotPoll(chainName, partitionName);
+	}
+	
+	public Snapshot<E> createImmutableSnapshotPoll(String chainName,String partitionName)
 	{
 		writeLock.lock();
 		try
@@ -279,9 +285,10 @@ public class MultiChainList<E>
 				this.snapshotVersion = this.modificationVersion;
 				this.openSnapshotVersionList.add(this.snapshotVersion);
 			}
-			ChainEndpointLink<E> beginLink = partition.getChainBegin().getLink(chainName);
 			Snapshot<E> snapshot = new Snapshot<>(this.snapshotVersion, chainName, partition, this);
 			this.snapshotVersion.addSnapshot(snapshot);
+			
+			Eyebolt<E> beginLink = partition.getPartitionBegin().getLink(chainName);
 			if(beginLink == null)
 			{
 				return snapshot;
@@ -291,32 +298,20 @@ public class MultiChainList<E>
 				return snapshot;
 			}
 			getModificationVersion();
-			ChainEndpointLink<E> endLink = partition.getChainEnd().getLink(chainName);
+			Eyebolt<E> endLink = partition.getPartitionEnd().getLink(chainName);
 			beginLink = beginLink.createNewerLink(modificationVersion);
 			endLink.previewsLink = beginLink;
 			beginLink.nextLink = endLink;
 			beginLink.setSize(0);
 			endLink.setSize(0);
-			if(beginLink.olderVersion.nextLink == null)
+			
+			
+			if(beginLink.olderVersion.nextLink != null)
 			{
-				return snapshot;
+				setObsolete(new ClearChainLink<E>(beginLink.olderVersion.nextLink));
 			}
 			
-			Link<E> obsolete = beginLink.olderVersion.nextLink;
-			while(obsolete != null)
-			{
-				if(obsolete instanceof ChainEndpointLink)
-				{
-					break;
-				}
-				if(obsolete.obsolete != Link.NO_OBSOLETE)
-				{
-					obsolete = obsolete.nextLink;
-					continue;
-				}
-				setObsolete(obsolete);
-				obsolete = obsolete.nextLink;
-			}
+			beginLink.olderVersion.clear();
 					
 			return snapshot;
 		}
@@ -390,26 +385,60 @@ public class MultiChainList<E>
 					}
 				}
 				
+				// TODO BG-Thread
+				
 				Link<E> obsoleteLink;
+				Link<E> clearLink;
 				while(! this.obsoleteList.isEmpty())
 				{
 					obsoleteLink = this.obsoleteList.getFirst();
 					if( minimalSnapshotVersionToKeep <= obsoleteLink.obsolete) 
 					{
-						// snapshot is created after link was mas obsolete
+						// snapshot is created after link was made obsolete
 						break;
 					}
 					this.obsoleteList.removeFirst();
 					
-					if(obsoleteLink.olderVersion != null)
+					if(obsoleteLink instanceof ClearChainLink)
 					{
-						obsoleteLink.olderVersion.newerVersion = obsoleteLink.newerVersion;
+
+						clearLink = ((ClearChainLink<E>)obsoleteLink).wrap;
+						((ClearChainLink<E>)obsoleteLink).wrap = null;
+						obsoleteLink.clear();
+						obsoleteLink  = clearLink;
+						
+						while(obsoleteLink != null)
+						{
+							if(obsoleteLink instanceof Eyebolt)
+							{
+								break;
+							}
+							
+							clearLink = obsoleteLink;
+							obsoleteLink = obsoleteLink.nextLink;
+							if(obsoleteLink.olderVersion != null)
+							{
+								obsoleteLink.olderVersion.newerVersion = obsoleteLink.newerVersion;
+							}
+							if(obsoleteLink.newerVersion != null)
+							{
+								obsoleteLink.newerVersion.newerVersion = obsoleteLink.olderVersion;
+							}
+							clearLink.clear();
+						}
 					}
-					if(obsoleteLink.newerVersion != null)
+					else
 					{
-						obsoleteLink.newerVersion.newerVersion = obsoleteLink.olderVersion;
+						if(obsoleteLink.olderVersion != null)
+						{
+							obsoleteLink.olderVersion.newerVersion = obsoleteLink.newerVersion;
+						}
+						if(obsoleteLink.newerVersion != null)
+						{
+							obsoleteLink.newerVersion.newerVersion = obsoleteLink.olderVersion;
+						}
+						obsoleteLink.clear();
 					}
-					obsoleteLink.clear();
 				}
 			}
 		}
@@ -652,5 +681,15 @@ public class MultiChainList<E>
 	{
 		public Partition<E> partition;
 		public Map<String,LinkageDefinition<E>> chains = new HashMap<String,LinkageDefinition<E>>();
+	}
+	
+	protected static class ClearChainLink<E> extends Link<E>
+	{
+		private Link<E> wrap; 
+		protected ClearChainLink(Link<E> wrap)
+		{
+			super();
+			this.wrap = wrap;
+		}
 	}
 }

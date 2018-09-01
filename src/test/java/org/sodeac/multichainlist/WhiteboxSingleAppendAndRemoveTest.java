@@ -10,7 +10,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.Iterator;
 
 import org.junit.Test;
-import org.sodeac.multichainlist.Partition.ChainEndpointLink;
+import org.sodeac.multichainlist.Node.Link;
+import org.sodeac.multichainlist.Partition.Eyebolt;
 
 public class WhiteboxSingleAppendAndRemoveTest
 {
@@ -26,8 +27,8 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		Node<String> node1 = mcl.append("1");
 		Partition<String> partition = mcl.getPartition(null);
-		ChainEndpointLink<String> begin = partition.chainBegin.getLink(null);
-		ChainEndpointLink<String> end = partition.chainEnd.getLink(null);
+		Eyebolt<String> begin = partition.partitionBegin.getLink(null);
+		Eyebolt<String> end = partition.partitionEnd.getLink(null);
 		Link<String> endLink = end;
 		Link<String> beginLink1 = begin;
 		
@@ -135,8 +136,8 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		Node<String> node1 = mcl.append("1");
 		Partition<String> partition = mcl.getPartition(null);
-		ChainEndpointLink<String> begin = partition.chainBegin.getLink(null);
-		ChainEndpointLink<String> end = partition.chainEnd.getLink(null);
+		Eyebolt<String> begin = partition.partitionBegin.getLink(null);
+		Eyebolt<String> end = partition.partitionEnd.getLink(null);
 		Link<String> endLink = end;
 		Link<String> beginLink1 = begin;
 		
@@ -188,7 +189,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		System.out.println("Remove Element '1'");
 		
 		link1S1.unlink();
-		Link<String> beginLink2 = partition.chainBegin.getLink(null);
+		Link<String> beginLink2 = partition.partitionBegin.getLink(null);
 		
 		System.out.println(partition.getListInfo(null));
 
@@ -338,8 +339,8 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		Node<String> node1 = mcl.append("1");
 		Partition<String> partition = mcl.getPartition(null);
-		ChainEndpointLink<String> begin = partition.chainBegin.getLink(null);
-		ChainEndpointLink<String> end = partition.chainEnd.getLink(null);
+		Eyebolt<String> begin = partition.partitionBegin.getLink(null);
+		Eyebolt<String> end = partition.partitionEnd.getLink(null);
 		Link<String> endLink = end;
 		Link<String> beginLink1 = begin;
 		
@@ -391,7 +392,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		System.out.println("Remove Element '1'");
 		
 		link1S1.unlink();
-		Link<String> beginLink2 = partition.chainBegin.getLink(null);
+		Link<String> beginLink2 = partition.partitionBegin.getLink(null);
 		
 		System.out.println(partition.getListInfo(null));
 

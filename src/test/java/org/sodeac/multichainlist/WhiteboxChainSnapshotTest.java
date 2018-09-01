@@ -37,7 +37,7 @@ public class WhiteboxChainSnapshotTest
 		mcl.append("12",definitionC);
 		
 		Chain<String> chain1 = mcl.chain("chain");
-		Snapshot<String> snapshot1 = chain1.createSnapshot();
+		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",6, snapshot1.size());
 		int index = 0;
 		for(String str: snapshot1)
@@ -47,7 +47,7 @@ public class WhiteboxChainSnapshotTest
 		}
 		
 		Chain<String> chain2 = mcl.chain("chain", partition1);
-		Snapshot<String> snapshot2 = chain2.createSnapshot();
+		Snapshot<String> snapshot2 = chain2.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",2, snapshot2.size());
 		index = 0;
 		for(String str: snapshot2)
@@ -88,7 +88,7 @@ public class WhiteboxChainSnapshotTest
 		mcl.append("8",definitionC);
 		
 		Chain<String> chain1 = mcl.chain("chain");
-		Snapshot<String> snapshot1 = chain1.createSnapshot();
+		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",4, snapshot1.size());
 		int index = 0;
 		for(String str: snapshot1)
@@ -129,7 +129,7 @@ public class WhiteboxChainSnapshotTest
 		mcl.append("8",definitionC);
 		
 		Chain<String> chain1 = mcl.chain("chain");
-		Snapshot<String> snapshot1 = chain1.createSnapshot();
+		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",4, snapshot1.size());
 		int index = 0;
 		for(String str: snapshot1)
@@ -171,7 +171,7 @@ public class WhiteboxChainSnapshotTest
 		mcl.append("8",definitionC);
 		
 		Chain<String> chain1 = mcl.chain("chain");
-		Snapshot<String> snapshot1 = chain1.createSnapshot();
+		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",4, snapshot1.size());
 		int index = 0;
 		for(String str: snapshot1)
