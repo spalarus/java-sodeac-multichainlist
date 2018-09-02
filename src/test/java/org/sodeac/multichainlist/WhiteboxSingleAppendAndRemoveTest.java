@@ -77,7 +77,15 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println("Remove Element '1'");
 		
-		link1S1.unlink();
+		try
+		{
+			link1S1.unlink();
+		}
+		catch (Exception e) 
+		{
+			e.printStackTrace();
+			throw e;
+		}
 		Link<String> beginLink2 = begin;
 		
 		System.out.println(partition.getListInfo(null));

@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.junit.FixMethodOrder;
@@ -90,7 +91,7 @@ public class DefaultTest
 				new LinkageDefinition("test",partition)
 		};
 		
-		Node<String>[] nodes = multiChainList.append(content, linkageDefintion);
+		Node<String>[] nodes = multiChainList.append(content, Arrays.asList(linkageDefintion));
 		
 		assertEquals("chain size should be correct ", content.size(), partition.getSize(null));
 		assertEquals("chain first element should be correct ", "1", partition.getFirstElement(null));
@@ -154,7 +155,7 @@ public class DefaultTest
 			assertNull("partitionname should be correct",partition.getName());
 			
 			item.unlink("test");
-			item.link(linkageDefintion2);
+			item.link(linkageDefintion2, Partition.LinkMode.APPEND);
 			index++;
 		}
 		assertEquals("size of snapshot should be correct", content.size(),  index);

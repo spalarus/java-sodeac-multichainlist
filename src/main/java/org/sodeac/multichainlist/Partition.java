@@ -23,6 +23,8 @@ import org.sodeac.multichainlist.Node.Link;
 
 public class Partition<E>
 {
+	public enum LinkMode {APPEND,PREPEND};
+	
 	protected Partition(String name, MultiChainList<E> multiChainList)
 	{
 		super();

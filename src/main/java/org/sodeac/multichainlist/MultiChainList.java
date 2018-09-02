@@ -44,6 +44,8 @@ public class MultiChainList<E>
 		this.partitionList.put(null, this.firstPartition);
 		this.modificationVersion = new SnapshotVersion<E>(this,0L);
 		this.obsoleteList = new LinkedList<Link<E>>();
+		this.openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
+		this.size = 0L;
 	}
 	
 	protected ReentrantReadWriteLock lock;
@@ -55,9 +57,12 @@ public class MultiChainList<E>
 	private volatile List<String> partitionNameList = null;
 	protected SnapshotVersion<E> modificationVersion = null;
 	protected SnapshotVersion<E> snapshotVersion = null;
-	protected Set<SnapshotVersion<E>> openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
+	protected Set<SnapshotVersion<E>> openSnapshotVersionList = null;
 	private volatile Partition<E> firstPartition = null;
 	private volatile Partition<E> lastPartition = null;
+	protected volatile LinkedList<IChainEventHandler<E>> registeredChainEventHandlerList = null;
+	private volatile LinkedList<IListEventHandler<E>> registeredEventHandlerList = null;
+	protected volatile long size;
 	
 	private Map<String,ChainsByPartition<E>> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition<E>>();
 	private LinkedList<ChainsByPartition<E>> _cachedChainsByPartition = new LinkedList<ChainsByPartition<E>>();
@@ -65,7 +70,7 @@ public class MultiChainList<E>
 	public static final LinkageDefinition<?> DEFAULT_CHAIN_SETTING =  new LinkageDefinition<>(null, null);
 	@SuppressWarnings("unchecked")
 	public final LinkageDefinition<E>[] DEFAULT_CHAIN_SETTINGS = new LinkageDefinition[] {DEFAULT_CHAIN_SETTING};
-	public final List<LinkageDefinition<E>> DEFAULT_CHAIN_SETTING_LIST = Arrays.asList(DEFAULT_CHAIN_SETTINGS);
+	public final List<LinkageDefinition<E>> DEFAULT_CHAIN_SETTING_LIST = Collections.unmodifiableList(Arrays.asList(DEFAULT_CHAIN_SETTINGS));
 	
 	private UUID uuid = null;
 	
@@ -86,6 +91,11 @@ public class MultiChainList<E>
 		return modificationVersion;
 	}
 	
+	public long getSize()
+	{
+		return size;
+	}
+
 	public Node<E>[] append(Collection<E> elements)
 	{
 		return append(elements, DEFAULT_CHAIN_SETTING_LIST);
@@ -102,8 +112,34 @@ public class MultiChainList<E>
 		
 	}
 	
-	@SuppressWarnings("unchecked")
 	public Node<E>[] append(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
+	{
+		return add(elements, linkageDefinitions, Partition.LinkMode.APPEND);
+	}
+	
+	public Node<E>[] prepend(Collection<E> elements)
+	{
+		return prepend(elements, DEFAULT_CHAIN_SETTING_LIST);
+	}
+	
+	@SafeVarargs
+	public final Node<E>[] prepend(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
+	{
+		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		{
+			return prepend(elements, DEFAULT_CHAIN_SETTING_LIST);
+		}
+		return prepend(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
+		
+	}
+	
+	public Node<E>[] prepend(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
+	{
+		return add(elements, linkageDefinitions, Partition.LinkMode.PREPEND);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private Node<E>[] add(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
 	{
 		if(elements == null)
 		{
@@ -115,6 +151,29 @@ public class MultiChainList<E>
 		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
 		{
 			linkageDefinitions = DEFAULT_CHAIN_SETTING_LIST;
+		}
+		
+		List<IListEventHandler<E>> eventHandlerList = this.registeredEventHandlerList;
+		if((eventHandlerList != null) && (!eventHandlerList.isEmpty()))
+		{
+			for(IListEventHandler<E> eventHandler : eventHandlerList)
+			{
+				try
+				{
+					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onAddElementList(elements, linkageDefinitions, linkMode);
+					if(newLinkageDefinitions != null)
+					{
+						linkageDefinitions = newLinkageDefinitions;
+					}
+				}
+				catch (Exception e) {}
+				catch (Error e) {}
+			}
+		}
+		
+		if(linkageDefinitions.isEmpty())
+		{
+			return null;
 		}
 		
 		writeLock.lock();
@@ -132,7 +191,14 @@ public class MultiChainList<E>
 				nodes[index++] = node;
 				for(ChainsByPartition<E> chainsByPartition : refactorLinkageDefintions(linkageDefinitions).values())
 				{
-					chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
+					if(linkMode == Partition.LinkMode.PREPEND)
+					{
+						chainsByPartition.partition.prependNode(node, chainsByPartition.chains.values(), modificationVersion);
+					}
+					else
+					{
+						chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
+					}
 				}
 			}
 		}
@@ -156,16 +222,64 @@ public class MultiChainList<E>
 		{
 			return append(element, DEFAULT_CHAIN_SETTING_LIST);
 		}
-		return append(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));	
+		return append(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
 	}
 	
-	public Node<E> append(E element, List<LinkageDefinition<E>> linkageDefinitionList)
+	public Node<E> append(E element, List<LinkageDefinition<E>> linkageDefinitions)
+	{
+		return add(element, linkageDefinitions, Partition.LinkMode.APPEND);
+	}
+	
+	public Node<E> prepend(E element)
+	{
+		return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
+	}
+	
+	@SafeVarargs
+	public final Node<E> prepend(E element, LinkageDefinition<E>... linkageDefinitions)
+	{
+		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		{
+			return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
+		}
+		return prepend(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
+	}
+	
+	public Node<E> prepend(E element, List<LinkageDefinition<E>> linkageDefinitions)
+	{
+		return add(element, linkageDefinitions, Partition.LinkMode.PREPEND);
+	}
+	
+	private Node<E> add(E element, List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
 	{
 		Node<E> node = null;
 		
-		if((linkageDefinitionList == null) || (linkageDefinitionList.size() == 0))
+		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
 		{
-			linkageDefinitionList = DEFAULT_CHAIN_SETTING_LIST;
+			linkageDefinitions = DEFAULT_CHAIN_SETTING_LIST;
+		}
+		
+		List<IListEventHandler<E>> eventHandlerList = this.registeredEventHandlerList;
+		if((eventHandlerList != null) && (!eventHandlerList.isEmpty()))
+		{
+			for(IListEventHandler<E> eventHandler : eventHandlerList)
+			{
+				try
+				{
+					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onAddElement(element, linkageDefinitions, linkMode);
+					if(newLinkageDefinitions != null)
+					{
+						linkageDefinitions = newLinkageDefinitions;
+					}
+				}
+				catch (Exception e) {}
+				catch (Error e) {}
+			}
+		}
+		
+		if(linkageDefinitions.isEmpty())
+		{
+			return null;
 		}
 		
 		writeLock.lock();
@@ -173,12 +287,19 @@ public class MultiChainList<E>
 		{
 			getModificationVersion();
 			
-			refactorLinkageDefintions(linkageDefinitionList);
+			refactorLinkageDefintions(linkageDefinitions);
 			
 			node = new Node<E>(element,this);
-			for(ChainsByPartition<E> chainsByPartition : refactorLinkageDefintions(linkageDefinitionList).values())
+			for(ChainsByPartition<E> chainsByPartition : refactorLinkageDefintions(linkageDefinitions).values())
 			{
-				chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
+				if(linkMode == Partition.LinkMode.PREPEND)
+				{
+					chainsByPartition.partition.prependNode(node, chainsByPartition.chains.values(), modificationVersion);
+				}
+				else
+				{
+					chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
+				}
 			}
 		}
 		finally 
@@ -343,6 +464,107 @@ public class MultiChainList<E>
 		}
 	}
 	
+	public void registerChainEventHandler(IChainEventHandler<E> eventHandler)
+	{
+		if(eventHandler == null)
+		{
+			return;
+		}
+		
+		writeLock.lock();
+		try
+		{
+			if(this.registeredChainEventHandlerList == null)
+			{
+				this.registeredChainEventHandlerList = new LinkedList<>();
+			}
+			else if(this.registeredChainEventHandlerList.contains(eventHandler))
+			{
+				return;
+			}
+			this.registeredChainEventHandlerList.addLast(eventHandler);
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+	}
+	public void unregisterChainEventHandler(IChainEventHandler<E> eventHandler)
+	{
+		if(eventHandler == null)
+		{
+			return;
+		}
+		
+		if(this.registeredChainEventHandlerList == null)
+		{
+			return;
+		}
+		
+		writeLock.lock();
+		try
+		{
+			this.registeredChainEventHandlerList.remove(eventHandler);
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+	}
+	
+	public void registerListEventHandler(IListEventHandler<E> eventHandler)
+	{
+		if(eventHandler == null)
+		{
+			return;
+		}
+		
+		writeLock.lock();
+		try
+		{
+			if(this.registeredEventHandlerList == null)
+			{
+				this.registeredEventHandlerList = new LinkedList<>();
+			}
+			else if(this.registeredEventHandlerList.contains(eventHandler))
+			{
+				return;
+			}
+			LinkedList<IListEventHandler<E>> newList = new LinkedList<IListEventHandler<E>>(this.registeredEventHandlerList);
+			newList.add(eventHandler);
+			this.registeredEventHandlerList = newList;
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+	}
+	
+	public void unregisterListEventHandler(IListEventHandler<E> eventHandler)
+	{
+		if(eventHandler == null)
+		{
+			return;
+		}
+		
+		if(this.registeredEventHandlerList == null)
+		{
+			return;
+		}
+		
+		writeLock.lock();
+		try
+		{
+			LinkedList<IListEventHandler<E>> newList = new LinkedList<IListEventHandler<E>>(this.registeredEventHandlerList);
+			newList.remove(eventHandler);
+			this.registeredEventHandlerList = newList;
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+	}
+	
 	public Chain<E> chain( String chainName)
 	{
 		return new Chain<E>(this, chainName, null);
@@ -384,8 +606,6 @@ public class MultiChainList<E>
 						minimalSnapshotVersionToKeep = usedSnapshotVersion.sequence;
 					}
 				}
-				
-				// TODO BG-Thread
 				
 				Link<E> obsoleteLink;
 				Link<E> clearLink;
@@ -601,8 +821,6 @@ public class MultiChainList<E>
 		
 		private long sequence;
 		private MultiChainList<E> multiChainList;
-		
-		//private Set<ChainEndpointLink<E>> modifiedBeginLinkages;
 		private Set<Snapshot<E>> openSnapshots;
 		
 		protected void addSnapshot(Snapshot<E> snapshot)

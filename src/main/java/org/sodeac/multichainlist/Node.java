@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.sodeac.multichainlist.MultiChainList.ChainsByPartition;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
@@ -32,6 +33,7 @@ public class Node<E>
 	protected E element = null;
 	protected Link<E> headOfDefaultChain = null;
 	protected Map<String,Link<E>> headsOfAdditionalChains = null;
+	private volatile int linkSize = 0;
 	
 	@SuppressWarnings("unchecked")
 	public final LinkageDefinition<E>[] getLinkageDefinitions()
@@ -98,13 +100,29 @@ public class Node<E>
 		
 	}
 	
-	@SuppressWarnings("unchecked")
-	public final void link(String chainName,Partition<E> partition)
+	protected void clear()
 	{
-		link( (LinkageDefinition<E>[])new LinkageDefinition<?>[] {new LinkageDefinition<E>(chainName, partition)});
+		multiChainList = null;
+		element = null;
+		headOfDefaultChain = null;
+		try
+		{
+			if(headsOfAdditionalChains != null)
+			{
+				headsOfAdditionalChains.clear();
+			}
+		}
+		catch (Exception e) {}
+		headsOfAdditionalChains = null;
 	}
 	
-	public final void link(LinkageDefinition<E>[] linkageDefinitions)
+	@SuppressWarnings("unchecked")
+	public final void link(String chainName,Partition<E> partition, Partition.LinkMode linkMode)
+	{
+		link( (LinkageDefinition<E>[])new LinkageDefinition<?>[] {new LinkageDefinition<E>(chainName, partition)}, linkMode);
+	}
+	
+	public final void link(LinkageDefinition<E>[] linkageDefinitions, Partition.LinkMode linkMode)
 	{
 		if(linkageDefinitions == null)
 		{
@@ -115,10 +133,10 @@ public class Node<E>
 			return;
 		}
 		
-		link(Arrays.asList(linkageDefinitions));
+		link(Arrays.asList(linkageDefinitions), linkMode);
 	}
 	
-	public final void link(List<LinkageDefinition<E>> linkageDefinitions)
+	public final void link(List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
 	{
 		if(! isPayload())
 		{
@@ -138,7 +156,14 @@ public class Node<E>
 			SnapshotVersion<E> currentVersion = multiChainList.getModificationVersion();
 			for(ChainsByPartition<E> chainsByPartition : multiChainList.refactorLinkageDefintions(linkageDefinitions).values())
 			{
-				chainsByPartition.partition.appendNode(this, chainsByPartition.chains.values(), currentVersion);
+				if(linkMode == Partition.LinkMode.PREPEND)
+				{
+					chainsByPartition.partition.prependNode(this, chainsByPartition.chains.values(), currentVersion);
+				}
+				else
+				{
+					chainsByPartition.partition.appendNode(this, chainsByPartition.chains.values(), currentVersion);
+				}
 			}
 		}
 		finally 
@@ -175,13 +200,19 @@ public class Node<E>
 		}
 	}
 	
+	public final int linkSize()
+	{
+		return linkSize;
+	}
+	
 	public final boolean unlink(String chainName)
 	{
 		if(! isPayload())
 		{
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
-		multiChainList.getWriteLock().lock();
+		WriteLock writeLock = multiChainList.getWriteLock();
+		writeLock.lock();
 		try
 		{
 			Link<E> link = getLink(chainName);
@@ -193,7 +224,7 @@ public class Node<E>
 		}
 		finally 
 		{
-			multiChainList.getWriteLock().unlock();
+			writeLock.unlock();
 		}
 		
 	}
@@ -275,6 +306,11 @@ public class Node<E>
 		
 		String chainName = link.linkageDefinition.getChainName();
 		
+		linkBegin.decrementSize();
+		linkEnd.decrementSize();
+		
+		setHead(chainName, null);
+		
 		if(multiChainList.openSnapshotVersionList.isEmpty())
 		{
 			link.clear();
@@ -284,10 +320,6 @@ public class Node<E>
 			multiChainList.setObsolete(link);
 		}
 		
-		linkBegin.decrementSize();
-		linkEnd.decrementSize();
-		
-		setHead(chainName, null);
 		
 		return true;
 	}
@@ -312,54 +344,131 @@ public class Node<E>
 	
 	protected Link<E> setHead(String chainName, Link<E> link)
 	{
-		if(link == null)
+		boolean startsWithEmptyState = linkSize ==  0;
+		try
 		{
-			if(chainName == null)
+			Partition<E> notifyPartition = null;
+			boolean notify = false;
+			if(link == null)
 			{
-				this.headOfDefaultChain = link;
-				return headOfDefaultChain;
-			}
-			if(headsOfAdditionalChains != null)
-			{
-				headsOfAdditionalChains.remove(chainName);
-			}
-			return null;
-		}
-		else
-		{
-			if(chainName == null)
-			{
-				if((this.headOfDefaultChain != null) && (this.headOfDefaultChain.linkageDefinition != null))
+				try
 				{
-					if(this.headOfDefaultChain.linkageDefinition.getPartition() != link.linkageDefinition.getPartition())
+					if(chainName == null)
 					{
-						throw new PartitionConflictException(chainName,this.headOfDefaultChain.linkageDefinition.getPartition(),link.linkageDefinition.getPartition(), this);
-					}
-				}
-				this.headOfDefaultChain = link;
-				return headOfDefaultChain;
-			}
-			if(headsOfAdditionalChains == null)
-			{
-				headsOfAdditionalChains = new HashMap<String,Link<E>>();	
-			}
-			else
-			{
-				Link<E> previewsHead = headsOfAdditionalChains.get(chainName);
-				if(previewsHead != null)
-				{
-					if(previewsHead.linkageDefinition != null)
-					{
-						if(previewsHead.linkageDefinition.getPartition() != link.linkageDefinition.getPartition())
+						if(this.headOfDefaultChain != null)
 						{
-							throw new PartitionConflictException(chainName,previewsHead.linkageDefinition.getPartition(),link.linkageDefinition.getPartition(), this);
+							notifyPartition = this.headOfDefaultChain.linkageDefinition.getPartition();
+							notify = true;
+							this.linkSize--;
+						}
+						this.headOfDefaultChain = link;
+						return headOfDefaultChain;
+					}
+					if(headsOfAdditionalChains != null)
+					{
+						Link<E> removed = headsOfAdditionalChains.remove(chainName);
+						if(removed != null)
+						{
+							notify = true;
+							notifyPartition = removed.linkageDefinition.getPartition();
+							this.linkSize--;
+						}
+					}
+					return null;
+				}
+				finally 
+				{
+					if((notify) && (multiChainList.registeredChainEventHandlerList != null))
+					{
+						for(IChainEventHandler<E> eventHandler :  multiChainList.registeredChainEventHandlerList)
+						{
+							try
+							{
+								eventHandler.onUnlink(this, chainName, notifyPartition, multiChainList.modificationVersion.getSequence());
+							}
+							catch (Exception e) {}
+							catch (Error e) {}
 						}
 					}
 				}
 			}
-			headsOfAdditionalChains.put(chainName, link);
+			else
+			{
+				try
+				{
+					if(chainName == null)
+					{
+						if((this.headOfDefaultChain != null) && (this.headOfDefaultChain.linkageDefinition != null))
+						{
+							if(this.headOfDefaultChain.linkageDefinition.getPartition() != link.linkageDefinition.getPartition())
+							{
+								throw new PartitionConflictException(chainName,this.headOfDefaultChain.linkageDefinition.getPartition(),link.linkageDefinition.getPartition(), this);
+							}
+						}
+						if(this.headOfDefaultChain == null)
+						{
+							notify = true;
+							linkSize++;
+						}
+						this.headOfDefaultChain = link;
+						return headOfDefaultChain;
+					}
+					if(headsOfAdditionalChains == null)
+					{
+						headsOfAdditionalChains = new HashMap<String,Link<E>>();	
+					}
+					else
+					{
+						Link<E> previewsHead = headsOfAdditionalChains.get(chainName);
+						if(previewsHead != null)
+						{
+							if(previewsHead.linkageDefinition != null)
+							{
+								if(previewsHead.linkageDefinition.getPartition() != link.linkageDefinition.getPartition())
+								{
+									throw new PartitionConflictException(chainName,previewsHead.linkageDefinition.getPartition(),link.linkageDefinition.getPartition(), this);
+								}
+							}
+						}
+					}
+					if(headsOfAdditionalChains.put(chainName, link) == null)
+					{
+						notify = true;
+						linkSize++;
+					}
+				}
+				finally 
+				{
+					if(notify)
+					{
+						if((notify) && (multiChainList.registeredChainEventHandlerList != null))
+						{
+							for(IChainEventHandler<E> eventHandler :  multiChainList.registeredChainEventHandlerList)
+							{
+								try
+								{
+									eventHandler.onLink(this, chainName, link.linkageDefinition.getPartition(), Partition.LinkMode.APPEND, multiChainList.modificationVersion.getSequence()); // TODO
+								}
+								catch (Exception e) {}
+								catch (Error e) {}
+							}
+						}
+					}
+				}
+			}
+			return headsOfAdditionalChains.get(chainName);
 		}
-		return headsOfAdditionalChains.get(chainName);
+		finally 
+		{
+			if((linkSize >  0L) && (startsWithEmptyState))
+			{
+				multiChainList.size++;
+			}
+			else if((linkSize == 0L) && (!startsWithEmptyState))
+			{
+				multiChainList.size--;
+			}
+		}
 	}
 	
 	
@@ -447,6 +556,13 @@ public class Node<E>
 
 		protected void clear()
 		{
+			if(this.node != null)
+			{
+				if(this.node.linkSize == 0)
+				{
+					this.node.clear();
+				}
+			}
 			this.linkageDefinition = null;
 			this.version = null;
 			this.newerVersion = null;
