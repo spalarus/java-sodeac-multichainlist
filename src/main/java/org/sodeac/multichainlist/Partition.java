@@ -394,7 +394,7 @@ public class Partition<E>
 	@Override
 	public String toString()
 	{
-		return "partition " + this.name;
+		return "[partition: " + this.name + "]";
 	}	
 	
 	public String getListInfo(String chainName)

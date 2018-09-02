@@ -540,6 +540,7 @@ public class MultiChainList<E>
 		_cachedRefactoredLinkageDefinition.clear();
 		
 		Partition<E> partition;
+		ChainsByPartition<E> chainsByPartition = null;
 		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
 		{
 			partition = linkageDefinition.getPartition();
@@ -551,7 +552,7 @@ public class MultiChainList<E>
 			{
 				throw new RuntimeException("partition is no member of multichainlist");
 			}
-			ChainsByPartition<E> chainsByPartition = _cachedRefactoredLinkageDefinition.get(partition.getName());
+			chainsByPartition = _cachedRefactoredLinkageDefinition.get(partition.getName());
 			if(chainsByPartition == null)
 			{
 				if(_cachedChainsByPartition.isEmpty())
@@ -569,6 +570,8 @@ public class MultiChainList<E>
 			}
 			chainsByPartition.chains.put(linkageDefinition.getChainName(),linkageDefinition);
 		}
+		chainsByPartition = null;
+		partition = null;
 		return _cachedRefactoredLinkageDefinition;
 	}
 

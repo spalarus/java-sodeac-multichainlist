@@ -312,28 +312,51 @@ public class Node<E>
 	
 	protected Link<E> setHead(String chainName, Link<E> link)
 	{
-		if(chainName == null)
-		{
-			this.headOfDefaultChain = link;
-			return headOfDefaultChain;
-		}
-		if(headsOfAdditionalChains == null)
-		{
-			if(link == null)
-			{
-				return null;
-			}
-			if(headsOfAdditionalChains == null)
-			{
-				headsOfAdditionalChains = new HashMap<String,Link<E>>();
-			}	
-		}
 		if(link == null)
 		{
-			headsOfAdditionalChains.remove(chainName);
+			if(chainName == null)
+			{
+				this.headOfDefaultChain = link;
+				return headOfDefaultChain;
+			}
+			if(headsOfAdditionalChains != null)
+			{
+				headsOfAdditionalChains.remove(chainName);
+			}
+			return null;
 		}
 		else
 		{
+			if(chainName == null)
+			{
+				if((this.headOfDefaultChain != null) && (this.headOfDefaultChain.linkageDefinition != null))
+				{
+					if(this.headOfDefaultChain.linkageDefinition.getPartition() != link.linkageDefinition.getPartition())
+					{
+						throw new PartitionConflictException(chainName,this.headOfDefaultChain.linkageDefinition.getPartition(),link.linkageDefinition.getPartition(), this);
+					}
+				}
+				this.headOfDefaultChain = link;
+				return headOfDefaultChain;
+			}
+			if(headsOfAdditionalChains == null)
+			{
+				headsOfAdditionalChains = new HashMap<String,Link<E>>();	
+			}
+			else
+			{
+				Link<E> previewsHead = headsOfAdditionalChains.get(chainName);
+				if(previewsHead != null)
+				{
+					if(previewsHead.linkageDefinition != null)
+					{
+						if(previewsHead.linkageDefinition.getPartition() != link.linkageDefinition.getPartition())
+						{
+							throw new PartitionConflictException(chainName,previewsHead.linkageDefinition.getPartition(),link.linkageDefinition.getPartition(), this);
+						}
+					}
+				}
+			}
 			headsOfAdditionalChains.put(chainName, link);
 		}
 		return headsOfAdditionalChains.get(chainName);
