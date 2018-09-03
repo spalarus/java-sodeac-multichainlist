@@ -420,7 +420,7 @@ public class MultiChainList<E>
 			}
 			getModificationVersion();
 			Eyebolt<E> endLink = partition.getPartitionEnd().getLink(chainName);
-			beginLink = beginLink.createNewerLink(modificationVersion);
+			beginLink = beginLink.createNewerLink(modificationVersion, null);
 			endLink.previewsLink = beginLink;
 			beginLink.nextLink = endLink;
 			beginLink.setSize(0);

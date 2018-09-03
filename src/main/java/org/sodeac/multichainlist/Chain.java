@@ -117,7 +117,7 @@ public class Chain<E>
 						}
 						
 						Eyebolt<E> endLink = partition.getPartitionEnd().getLink(this.chain.chainName);
-						beginLink = beginLink.createNewerLink(modificationVersion);
+						beginLink = beginLink.createNewerLink(modificationVersion, null);
 						endLink.previewsLink = beginLink;
 						beginLink.nextLink = endLink;
 						beginLink.setSize(0);

@@ -20,6 +20,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.sodeac.multichainlist.MultiChainList.ChainsByPartition;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Partition.Eyebolt;
+import org.sodeac.multichainlist.Partition.LinkMode;
 
 public class Node<E>
 {
@@ -279,7 +280,7 @@ public class Node<E>
 				if(! multiChainList.openSnapshotVersionList.isEmpty())
 				{
 					nextOfNext = next.nextLink;
-					next = next.createNewerLink(currentVersion);
+					next = next.createNewerLink(currentVersion, null);
 					next.nextLink = nextOfNext;
 					nextOfNext.previewsLink = next;
 				}
@@ -299,7 +300,7 @@ public class Node<E>
 				{
 					isEndpoint = prev instanceof Eyebolt;
 				}
-				prev = prev.createNewerLink(currentVersion);
+				prev = prev.createNewerLink(currentVersion, null);
 				if(isEndpoint)
 				{
 					linkBegin = partition.getPartitionBegin().getLink(link.linkageDefinition.getChainName());
@@ -325,7 +326,7 @@ public class Node<E>
 		linkBegin.decrementSize();
 		linkEnd.decrementSize();
 		
-		setHead(chainName, null);
+		setHead(chainName, null, null);
 		
 		if(multiChainList.openSnapshotVersionList.isEmpty())
 		{
@@ -353,12 +354,12 @@ public class Node<E>
 		return headsOfAdditionalChains.get(chainName);
 	}
 	
-	protected Link<E> createHead(LinkageDefinition<E> linkageDefinition,SnapshotVersion<E> currentVersion)
+	protected Link<E> createHead(LinkageDefinition<E> linkageDefinition,SnapshotVersion<E> currentVersion, Partition.LinkMode linkMode)
 	{
-		return setHead(linkageDefinition.getChainName(),new Link<>(linkageDefinition, this, currentVersion));
+		return setHead(linkageDefinition.getChainName(),new Link<>(linkageDefinition, this, currentVersion),linkMode);
 	}
 	
-	protected Link<E> setHead(String chainName, Link<E> link)
+	protected Link<E> setHead(String chainName, Link<E> link, Partition.LinkMode linkMode)
 	{
 		boolean startsWithEmptyState = linkSize ==  0;
 		try
@@ -463,7 +464,7 @@ public class Node<E>
 							{
 								try
 								{
-									eventHandler.onLink(this, chainName, link.linkageDefinition.getPartition(), Partition.LinkMode.APPEND, multiChainList.modificationVersion.getSequence()); // TODO
+									eventHandler.onLink(this, chainName, link.linkageDefinition.getPartition(), linkMode, multiChainList.modificationVersion.getSequence());
 								}
 								catch (Exception e) {}
 								catch (Error e) {}
@@ -538,13 +539,13 @@ public class Node<E>
 		protected volatile Link<E> previewsLink= null;
 		protected volatile Link<E> nextLink = null;
 		
-		protected Link<E> createNewerLink(SnapshotVersion<E> currentVersion)
+		protected Link<E> createNewerLink(SnapshotVersion<E> currentVersion, LinkMode linkMode)
 		{
 			Link<E> newVersion = new Link<>(this.linkageDefinition, this.node,currentVersion);
 			newVersion.olderVersion = this;
 			this.newerVersion = newVersion;
 			this.node.multiChainList.setObsolete(this);
-			this.node.setHead(this.linkageDefinition.getChainName(), newVersion);
+			this.node.setHead(this.linkageDefinition.getChainName(), newVersion, linkMode);
 			return newVersion;
 		}
 		

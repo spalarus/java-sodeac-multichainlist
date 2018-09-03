@@ -87,12 +87,12 @@ public class Partition<E>
 			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
 			if(linkBegin == null)
 			{
-				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion);
+				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion, null);
 			}
 			linkEnd = partitionEnd.getLink(linkageDefinition.getChainName());
 			if(linkEnd == null)
 			{
-				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion);
+				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion, null);
 			}
 			if(linkBegin.nextLink == null)
 			{
@@ -105,7 +105,7 @@ public class Partition<E>
 			
 			Link<E> prev = linkEnd.previewsLink;
 			
-			link = node.createHead(linkageDefinition, currentVersion);
+			link = node.createHead(linkageDefinition, currentVersion, LinkMode.APPEND);
 
 			Link<E> previewsOfPreviews = null;
 			if((prev.version != currentVersion) && (prev != linkBegin))
@@ -118,7 +118,7 @@ public class Partition<E>
 					if(! multiChainList.openSnapshotVersionList.isEmpty())
 					{
 						previewsOfPreviews = prev.previewsLink;
-						prev = prev.createNewerLink(currentVersion);
+						prev = prev.createNewerLink(currentVersion, null);
 						prev.previewsLink = previewsOfPreviews;
 					}
 				}
@@ -164,12 +164,12 @@ public class Partition<E>
 			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
 			if(linkBegin == null)
 			{
-				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion);
+				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion, null);
 			}
 			linkEnd = partitionEnd.getLink(linkageDefinition.getChainName());
 			if(linkEnd == null)
 			{
-				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion);
+				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion, null);
 			}
 			if(linkBegin.nextLink == null)
 			{
@@ -182,7 +182,7 @@ public class Partition<E>
 			
 			Link<E> next = linkBegin.nextLink;
 			
-			link = node.createHead(linkageDefinition, currentVersion);
+			link = node.createHead(linkageDefinition, currentVersion, LinkMode.PREPEND);
 
 			// Save Water ....
 			
@@ -299,10 +299,10 @@ public class Partition<E>
 		}
 
 		@Override
-		protected Eyebolt<E> createHead(LinkageDefinition<E> linkageDefinition, SnapshotVersion<E> currentVersion)
+		protected Eyebolt<E> createHead(LinkageDefinition<E> linkageDefinition, SnapshotVersion<E> currentVersion, LinkMode linkMode)
 		{
 			Link<E> link = new Eyebolt<E>(linkageDefinition, this, currentVersion);
-			return (Eyebolt<E>)super.setHead(linkageDefinition.getChainName(), link);
+			return (Eyebolt<E>)super.setHead(linkageDefinition.getChainName(), link, null);
 		}
 	}
 
@@ -335,14 +335,14 @@ public class Partition<E>
 			return --size;
 		}
 		
-		protected Eyebolt<E> createNewerLink(SnapshotVersion<E> currentVersion)
+		protected Eyebolt<E> createNewerLink(SnapshotVersion<E> currentVersion, LinkMode linkMode)
 		{
 			Eyebolt<E> newVersion = new Eyebolt<>(this.linkageDefinition, this.node,currentVersion);
 			newVersion.size = size;
 			newVersion.olderVersion = this;
 			this.newerVersion = newVersion;
 			this.node.multiChainList.setObsolete(this);
-			this.node.setHead(this.linkageDefinition.getChainName(), newerVersion);
+			this.node.setHead(this.linkageDefinition.getChainName(), newerVersion, null);
 			return newVersion;
 		}
 
