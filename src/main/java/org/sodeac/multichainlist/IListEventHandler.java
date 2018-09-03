@@ -15,6 +15,7 @@ import java.util.List;
 
 public interface IListEventHandler<E>
 {
-	public List<LinkageDefinition<E>> onAddElementList(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions,Partition.LinkMode linkMode);
-	public List<LinkageDefinition<E>> onAddElement(E element, List<LinkageDefinition<E>> linkageDefinitions,Partition.LinkMode linkMode);
+	public List<LinkageDefinition<E>> onCreateNodeList(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions,Partition.LinkMode linkMode);
+	public List<LinkageDefinition<E>> onCreateNode(E element, List<LinkageDefinition<E>> linkageDefinitions,Partition.LinkMode linkMode);
+	public void onClearNode(E element);
 }

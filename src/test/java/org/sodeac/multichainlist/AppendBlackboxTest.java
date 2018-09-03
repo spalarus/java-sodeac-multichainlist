@@ -14,7 +14,7 @@ import org.junit.runners.MethodSorters;
 import org.sodeac.multichainlist.Node.Link;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class DefaultTest
+public class AppendBlackboxTest
 {
 
 	@Test
@@ -41,6 +41,7 @@ public class DefaultTest
 		
 		Partition<String> partition = multiChainList.getPartition(null);
 		
+		assertEquals("list size should be correct ", content.size(), multiChainList.getSize());
 		assertEquals("chain size should be correct ", content.size(), partition.getSize(null));
 		assertEquals("chain first element should be correct ", "1", partition.getFirstElement(null));
 		
@@ -93,6 +94,7 @@ public class DefaultTest
 		
 		Node<String>[] nodes = multiChainList.append(content, Arrays.asList(linkageDefintion));
 		
+		assertEquals("list size should be correct ", content.size(), multiChainList.getSize());
 		assertEquals("chain size should be correct ", content.size(), partition.getSize(null));
 		assertEquals("chain first element should be correct ", "1", partition.getFirstElement(null));
 		
@@ -159,8 +161,12 @@ public class DefaultTest
 			index++;
 		}
 		assertEquals("size of snapshot should be correct", content.size(),  index);
+		
+		assertEquals("list size should be correct ", content.size(), multiChainList.getSize());
 
 		snapshot2.close();
+		
+		assertEquals("list size should be correct ", content.size(), multiChainList.getSize());
 		
 		Snapshot<String> snapshot3 = multiChainList.createImmutableSnapshot("test",null);
 		assertNotNull("snapshot should not be null", snapshot3);
@@ -268,6 +274,8 @@ public class DefaultTest
 		
 		multiChainList.append(content1);
 		
+		assertEquals("list size should be correct ", content1.size(), multiChainList.getSize());
+		
 		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		assertNotNull("snapshot should not be null", snapshot1);
@@ -275,6 +283,8 @@ public class DefaultTest
 		snapshot1.close();
 		
 		multiChainList.append(content2); // no opening snapshot => no snapshot version => does not create new modified version
+		
+		assertEquals("list size should be correct ", content1.size() + content2.size(), multiChainList.getSize());
 		
 		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
 		assertNotNull("snapshot should not be null", snapshot2);
@@ -377,6 +387,8 @@ public class DefaultTest
 		content1.add("3");
 		
 		Node<String>[] nodes = multiChainList.append(content1);
+		
+		assertEquals("list size should be correct ", content1.size(), multiChainList.getSize());
 
 		Node<String> node1 = nodes[0];
 		Node<String> node2 = nodes[1];
@@ -393,6 +405,8 @@ public class DefaultTest
 		snapshot1.getLink("2").unlink();
 		
 		content1.remove("2");
+		
+		assertEquals("list size should be correct ", content1.size(), multiChainList.getSize());
 		
 		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
 		assertNotNull("snapshot should not be null", snapshot2);
@@ -425,90 +439,8 @@ public class DefaultTest
 		
 		snapshot2.close();
 		
-		
+		assertEquals("list size should be correct ", content1.size(), multiChainList.getSize());
 	}
-	
-	/*@Test
-	public void test00030ClearPartitionOpenSnapshot() throws Exception
-	{
-		MultiChainList<String> multiChainList = new MultiChainList<String>();
-		List<String> content1 = new ArrayList<String>();
-		content1.add("1");
-		content1.add("2");
-		content1.add("3");
-		
-		Node<String>[] nodes = multiChainList.append(content1, null);
-
-		Snapshot<String> snapshot1 = multiChainList.createSnapshot(null, null);
-		assertNotNull("snapshot should not be null", snapshot1);
-		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
-		
-		Node<String> node1 = nodes[0];
-		Node<String> node2 = nodes[1];
-		Node<String> node3 = nodes[2];
-		
-		assertNotNull("node1 should not be null", node1);
-		assertNotNull("node2 should not be null", node2);
-		assertNotNull("node3 should not be null", node3);
-		
-		Link<String> link1 = node1.defaultChainLink;
-		Link<String> link2 = node2.defaultChainLink;
-		Link<String> link3 = node3.defaultChainLink;
-		
-		assertNotNull("link1 should not be null", link1);
-		assertNotNull("link2 should not be null", link2);
-		assertNotNull("link3 should not be null", link3);
-		
-		multiChainList.getPartition(null).clear();
-		
-		assertNull("node1 should be cleared ",node1.defaultChainLink);
-		assertNull("node1 should be cleared ",node1.links);
-		assertNull("node1 should be cleared ",node1.element);
-		assertNull("node1 should be cleared ",node1.multiChainList);
-		
-		assertNull("node2 should be cleared ",node2.defaultChainLink);
-		assertNull("node2 should be cleared ",node2.links);
-		assertNull("node2 should be cleared ",node2.element);
-		assertNull("node2 should be cleared ",node2.multiChainList);
-		
-		assertNull("node3 should be cleared ",node3.defaultChainLink);
-		assertNull("node3 should be cleared ",node3.links);
-		assertNull("node3 should be cleared ",node3.element);
-		assertNull("node3 should be cleared ",node3.multiChainList);
-		
-		Snapshot<String> snapshot2 = multiChainList.createSnapshot(null, null);
-		assertNotNull("snapshot should not be null", snapshot2);
-		assertEquals("snapshot.size() should be correct ", 0, snapshot2.size());
-		
-		
-		// snapshot 1 should complete
-		int index = 0;
-		for(String str : snapshot1)
-		{
-			assertEquals("nextValue should be correct", content1.get(index), str);
-			Node<String> item = nodes[index];
-			assertNotNull("item should not null", item);
-			
-			index++;
-		}
-		assertEquals("size of snapshot1 should be correct", content1.size(),  index);
-		assertEquals("size of snapshot1 should be correct", 3, snapshot1.size());
-		
-		// snapshot 2 should empty
-		index = 0;
-		for(String str : snapshot2)
-		{
-			index++;
-		}
-		assertEquals("size of snapshot1 should be correct", 0, index);
-		assertEquals("size of snapshot1 should be correct", 0, snapshot2.size());
-		
-		snapshot1.close();
-		
-		snapshot2.close();
-		
-		
-	}*/
 	
 	@Test
 	public void test00100AppendSnaphots1() throws Exception

@@ -61,7 +61,7 @@ public class MultiChainList<E>
 	private volatile Partition<E> firstPartition = null;
 	private volatile Partition<E> lastPartition = null;
 	protected volatile LinkedList<IChainEventHandler<E>> registeredChainEventHandlerList = null;
-	private volatile LinkedList<IListEventHandler<E>> registeredEventHandlerList = null;
+	protected volatile LinkedList<IListEventHandler<E>> registeredEventHandlerList = null;
 	protected volatile long size;
 	
 	private Map<String,ChainsByPartition<E>> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition<E>>();
@@ -160,7 +160,7 @@ public class MultiChainList<E>
 			{
 				try
 				{
-					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onAddElementList(elements, linkageDefinitions, linkMode);
+					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onCreateNodeList(elements, linkageDefinitions, linkMode);
 					if(newLinkageDefinitions != null)
 					{
 						linkageDefinitions = newLinkageDefinitions;
@@ -266,7 +266,7 @@ public class MultiChainList<E>
 			{
 				try
 				{
-					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onAddElement(element, linkageDefinitions, linkMode);
+					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onCreateNode(element, linkageDefinitions, linkMode);
 					if(newLinkageDefinitions != null)
 					{
 						linkageDefinitions = newLinkageDefinitions;

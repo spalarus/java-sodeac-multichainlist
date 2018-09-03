@@ -102,6 +102,22 @@ public class Node<E>
 	
 	protected void clear()
 	{
+		if(multiChainList != null)
+		{
+			List<IListEventHandler<E>> eventHandlerList = multiChainList.registeredEventHandlerList;
+			if(eventHandlerList != null)
+			{
+				for(IListEventHandler<E> eventHandler :  eventHandlerList)
+				{
+					try
+					{
+						eventHandler.onClearNode(element);
+					}
+					catch (Exception e) {}
+					catch (Error e) {}
+				}
+			}
+		}
 		multiChainList = null;
 		element = null;
 		headOfDefaultChain = null;
@@ -378,7 +394,7 @@ public class Node<E>
 				}
 				finally 
 				{
-					if((notify) && (multiChainList.registeredChainEventHandlerList != null))
+					if((notify) && isPayload() && (multiChainList.registeredChainEventHandlerList != null))
 					{
 						for(IChainEventHandler<E> eventHandler :  multiChainList.registeredChainEventHandlerList)
 						{
@@ -439,7 +455,7 @@ public class Node<E>
 				}
 				finally 
 				{
-					if(notify)
+					if(notify && isPayload())
 					{
 						if((notify) && (multiChainList.registeredChainEventHandlerList != null))
 						{
@@ -460,13 +476,16 @@ public class Node<E>
 		}
 		finally 
 		{
-			if((linkSize >  0L) && (startsWithEmptyState))
+			if(isPayload())
 			{
-				multiChainList.size++;
-			}
-			else if((linkSize == 0L) && (!startsWithEmptyState))
-			{
-				multiChainList.size--;
+				if((linkSize >  0L) && (startsWithEmptyState))
+				{
+					multiChainList.size++;
+				}
+				else if((linkSize == 0L) && (!startsWithEmptyState))
+				{
+					multiChainList.size--;
+				}
 			}
 		}
 	}
