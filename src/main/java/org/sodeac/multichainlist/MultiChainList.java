@@ -430,6 +430,25 @@ public class MultiChainList<E>
 			if(beginLink.olderVersion.nextLink != null)
 			{
 				setObsolete(new ClearChainLink<E>(beginLink.olderVersion.nextLink));
+				
+				Link<E> clearLink = beginLink.olderVersion.nextLink;
+				Link<E> nextLink;
+				while(clearLink != null)
+				{
+					nextLink = clearLink.nextLink;
+					
+					if(clearLink.node != null)
+					{
+						if(!clearLink.node.isPayload())
+						{
+							break;
+						}
+						
+						clearLink.node.setHead(chainName, null, null);
+					}
+					
+					clearLink = nextLink;
+				}
 			}
 			
 			beginLink.olderVersion.clear();
@@ -457,6 +476,69 @@ public class MultiChainList<E>
 				this.openSnapshotVersionList.add(this.snapshotVersion);
 			}
 			return partition.createSnapshot(chainName, this.snapshotVersion);
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+	}
+	
+	public void clear(String chainName,String partitionName)
+	{
+		writeLock.lock();
+		try
+		{
+			Partition<E> partition = this.partitionList.get(partitionName);
+			if(partition == null)
+			{
+				throw new RuntimeException("partition " + partitionName + " not found");
+			}
+			
+			Eyebolt<E> beginLink = partition.getPartitionBegin().getLink(chainName);
+			if(beginLink == null)
+			{
+				return;
+			}
+			if(beginLink.getSize() == 0)
+			{
+				return;
+			}
+			
+			if(openSnapshotVersionList.isEmpty())
+			{
+				Eyebolt<E> endLink = partition.getPartitionEnd().getLink(chainName);
+				Link<E> clearLink = beginLink.nextLink;
+				endLink.previewsLink = beginLink;
+				beginLink.nextLink = endLink;
+				beginLink.setSize(0);
+				endLink.setSize(0);
+				
+				Link<E> nextLink;
+				while(clearLink != null)
+				{
+					if((clearLink.node != null) && (!clearLink.node.isPayload()))
+					{
+						break;
+					}
+					nextLink = clearLink.nextLink;
+					
+					if(clearLink.node != null)
+					{
+						clearLink.node.setHead(chainName, null, null);
+					}
+					clearLink.clear();
+					
+					clearLink = nextLink;
+				}
+			}
+			else
+			{
+				try
+				{
+					createImmutableSnapshotPoll(chainName, partitionName).close();
+				}
+				catch (Exception e) {}
+			}
 		}
 		finally 
 		{
