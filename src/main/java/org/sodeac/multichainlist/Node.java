@@ -452,6 +452,10 @@ public class Node<E>
 					{
 						notify = true;
 						linkSize++;
+						if (!isPayload())
+						{
+							multiChainList.chainNameListCopy = null;
+						}
 					}
 				}
 				finally 

@@ -55,6 +55,7 @@ public class Chain<E>
 		multiChainList.writeLock.lock();
 		try
 		{
+			multiChainList.chainNameListCopy = null;
 			if(multiChainList.openSnapshotVersionList.isEmpty())
 			{
 				for(Partition<E> partition : this.getPartitions())
@@ -182,10 +183,32 @@ public class Chain<E>
 						beginLink.nextLink = endLink;
 						beginLink.setSize(0);
 						endLink.setSize(0);
+						
+						this.chain.multiChainList.chainNameListCopy = null;
+						
 						if(beginLink.olderVersion.nextLink != null)
 						{
 							chain.multiChainList.setObsolete(new ClearChainLink<E>(beginLink.olderVersion.nextLink));
-						}
+							
+							Link<E> clearLink = beginLink.olderVersion.nextLink;
+							Link<E> nextLink;
+							while(clearLink != null)
+							{
+								nextLink = clearLink.nextLink;
+								
+								if(clearLink.node != null)
+								{
+									if(!clearLink.node.isPayload())
+									{
+										break;
+									}
+									
+									clearLink.node.setHead(this.chain.chainName, null, null);
+								}
+								
+								clearLink = nextLink;
+							}
+						}						
 					}
 				}
 			}

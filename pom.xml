@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.sodeac</groupId>
   <artifactId>org.sodeac.multichainlist</artifactId>
-  <version>0.9.2-SNAPSHOT</version>
+  <version>0.9.3-SNAPSHOT</version>
   <name>Sodeac Multi Chain LinkedList</name>
   <description>A snapshotable linkedlist with multible chains, grouped in partitions</description>
   <packaging>bundle</packaging>
@@ -10,7 +10,7 @@
  <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jdk.version>1.8</jdk.version>
-    <bundle.version>0.9.2</bundle.version>
+    <bundle.version>0.9.3</bundle.version>
   </properties>
   
   <dependencies>

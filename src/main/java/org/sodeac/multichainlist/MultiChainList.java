@@ -52,14 +52,16 @@ public class MultiChainList<E>
 	protected ReadLock readLock;
 	protected WriteLock writeLock;
 	
-	private LinkedList<Link<E>> obsoleteList = null;
+	protected LinkedList<Link<E>> obsoleteList = null;
 	protected HashMap<String, Partition<E>>  partitionList = null;
-	private volatile List<String> partitionNameList = null;
+	protected volatile List<String> partitionNameListCopy = null;
+	protected volatile List<String> chainNameListCopy = null;
+	protected volatile List<Partition<E>> partitionListCopy = null;
 	protected SnapshotVersion<E> modificationVersion = null;
 	protected SnapshotVersion<E> snapshotVersion = null;
 	protected Set<SnapshotVersion<E>> openSnapshotVersionList = null;
-	private volatile Partition<E> firstPartition = null;
-	private volatile Partition<E> lastPartition = null;
+	protected volatile Partition<E> firstPartition = null;
+	protected volatile Partition<E> lastPartition = null;
 	protected volatile LinkedList<IChainEventHandler<E>> registeredChainEventHandlerList = null;
 	protected volatile LinkedList<IListEventHandler<E>> registeredEventHandlerList = null;
 	protected volatile long size;
@@ -323,9 +325,40 @@ public class MultiChainList<E>
 		}
 	}
 	
+	public List<String> getChainNameList()
+	{
+		List<String> chainNameList = this.chainNameListCopy;
+		if(chainNameList != null)
+		{
+			return chainNameList;
+		}
+		readLock.lock();
+		try
+		{
+			if(this.chainNameListCopy != null)
+			{
+				return this.chainNameListCopy;
+			}
+			Set<String> set = new HashSet<String>();
+			for(Partition<E> partition : this.partitionList.values())
+			{
+				if((partition.getPartitionBegin() != null) && (partition.getPartitionBegin().headsOfAdditionalChains != null))
+				{
+					set.addAll(partition.getPartitionBegin().headsOfAdditionalChains.keySet());
+				}
+			}
+			this.chainNameListCopy = Collections.unmodifiableList(Arrays.asList(set.toArray(new String[set.size()])));
+			return this.chainNameListCopy;
+		}
+		finally
+		{
+			readLock.unlock();
+		}
+	}
+	
 	public List<String> getPartitionNameList()
 	{
-		List<String> partitionList = this.partitionNameList;
+		List<String> partitionList = this.partitionNameListCopy;
 		if(partitionList != null)
 		{
 			return partitionList;
@@ -333,17 +366,17 @@ public class MultiChainList<E>
 		readLock.lock();
 		try
 		{
-			if(this.partitionNameList != null)
+			if(this.partitionNameListCopy != null)
 			{
-				return this.partitionNameList;
+				return this.partitionNameListCopy;
 			}
 			List<String> list = new ArrayList<>(this.partitionList.size());
 			for(String partitionName : this.partitionList.keySet())
 			{
 				list.add(partitionName);
 			}
-			this.partitionNameList = Collections.unmodifiableList(list);
-			return this.partitionNameList;
+			this.partitionNameListCopy = Collections.unmodifiableList(list);
+			return this.partitionNameListCopy;
 		}
 		finally
 		{
@@ -353,6 +386,12 @@ public class MultiChainList<E>
 	
 	public List<Partition<E>> getPartitionList()
 	{
+		List<Partition<E>> partitionList = this.partitionListCopy;
+		if(partitionList != null)
+		{
+			return partitionList;
+		}
+		
 		readLock.lock();
 		try
 		{
@@ -364,7 +403,8 @@ public class MultiChainList<E>
 				partition = partition.next;
 				list.add(partition);
 			}
-			return list;
+			this.partitionListCopy = Collections.unmodifiableList(list);
+			return partitionListCopy;
 		}
 		finally
 		{
@@ -406,6 +446,9 @@ public class MultiChainList<E>
 				this.snapshotVersion = this.modificationVersion;
 				this.openSnapshotVersionList.add(this.snapshotVersion);
 			}
+			
+			chainNameListCopy = null;
+					
 			Snapshot<E> snapshot = new Snapshot<>(this.snapshotVersion, chainName, partition, this);
 			this.snapshotVersion.addSnapshot(snapshot);
 			
@@ -503,6 +546,8 @@ public class MultiChainList<E>
 			{
 				return;
 			}
+			
+			chainNameListCopy = null;
 			
 			if(openSnapshotVersionList.isEmpty())
 			{
@@ -743,6 +788,10 @@ public class MultiChainList<E>
 					}
 				}
 			}
+			if((snapshotVersion != this.modificationVersion) && (snapshotVersion != this.snapshotVersion))
+			{
+				snapshotVersion.clear();
+			}
 		}
 		finally 
 		{
@@ -774,6 +823,51 @@ public class MultiChainList<E>
 		return writeLock;
 	}
 
+	public Collection<Partition<E>> definePartitions(String... partitionNames)
+	{
+		if(partitionNames == null)
+		{
+			return null;
+		}
+		if(partitionNames.length == 0)
+		{
+			return null;
+		}
+		List<Partition<E>> definedPartitionList = new ArrayList<Partition<E>>(partitionNames.length);
+		
+		writeLock.lock();
+		try
+		{
+
+			Partition<E> partition;
+			for(String partitionName : partitionNames)
+			{
+				partition = getPartition(partitionName);
+				if(partition !=  null)
+				{
+					definedPartitionList.add(partition);
+					continue;
+				}
+				
+				this.partitionNameListCopy = null;
+				this.partitionListCopy = null;
+				
+				partition = new Partition<E>(partitionName,this);
+				this.lastPartition.next = partition;
+				partition.previews = this.lastPartition;
+				partitionList.put(partitionName, partition);
+				
+				lastPartition = partition;
+				definedPartitionList.add(partition);
+			}
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+		
+		return Collections.unmodifiableList(definedPartitionList);
+	}
 	public Partition<E> definePartition(String partitionName)
 	{
 		Partition<E> partition = getPartition(partitionName);
@@ -785,7 +879,9 @@ public class MultiChainList<E>
 		writeLock.lock();
 		try
 		{
-			this.partitionNameList = null;
+			this.partitionNameListCopy = null;
+			this.partitionListCopy = null;
+			
 			partition = partitionList.get(partitionName);
 			if(partition != null)
 			{
@@ -978,6 +1074,16 @@ public class MultiChainList<E>
 					+ " : open snapshots " + (this.openSnapshots == null ? "null" : this.openSnapshots.size()) 
 			;
 		}
+		
+		protected void clear()
+		{
+			multiChainList = null;
+			if(openSnapshots != null)
+			{
+				try {openSnapshots.clear();}catch (Exception e) {}
+				openSnapshots = null;
+			}
+		}
 	}
 	
 	protected static class ChainsByPartition<E>
@@ -993,6 +1099,174 @@ public class MultiChainList<E>
 		{
 			super();
 			this.wrap = wrap;
+		}
+	}
+	
+	public void dispose()
+	{
+		writeLock.lock();
+		try
+		{
+			if(! this.openSnapshotVersionList.isEmpty())
+			{
+				while(! this.openSnapshotVersionList.isEmpty())
+				{
+					this.removeSnapshotVersion(this.openSnapshotVersionList.iterator().next());
+				}
+			}
+			Eyebolt<E> eyebolt;
+			for(Partition<E> partition : getPartitionList())
+			{
+				this.clear(null,partition.name);
+				
+				for(String chainName : getChainNameList())
+				{
+					this.clear(chainName,partition.name);
+					
+					if(partition.getPartitionBegin() != null)
+					{
+						eyebolt = partition.getPartitionBegin().getLink(chainName);
+						if(eyebolt != null)
+						{
+							eyebolt.clear();
+						}
+					}
+					
+					if(partition.getPartitionEnd() != null)
+					{
+						eyebolt = partition.getPartitionEnd().getLink(chainName);
+						if(eyebolt != null)
+						{
+							eyebolt.clear();
+						}
+					}
+				}
+				
+				if(partition.getPartitionBegin() != null)
+				{
+					eyebolt = partition.getPartitionBegin().getLink(null);
+					if(eyebolt != null)
+					{
+						eyebolt.clear();
+					}
+					
+					partition.getPartitionBegin().clear();
+				}
+				
+				if(partition.getPartitionEnd() != null)
+				{
+					eyebolt = partition.getPartitionEnd().getLink(null);
+					if(eyebolt != null)
+					{
+						eyebolt.clear();
+					}
+				}
+				
+				partition.multiChainList = null;
+				partition.name = null;
+				partition.previews = null;
+				partition.next = null;
+				partition.partitionBegin = null;
+				partition.partitionEnd = null;
+				partition.privateLinkageDefinitions = null;
+			}
+			
+			if(obsoleteList != null)
+			{
+				try{obsoleteList.clear();}catch (Exception e) {}
+				obsoleteList = null;
+			}
+			if(partitionList != null)
+			{
+				try{partitionList.clear();}catch (Exception e) {}
+				partitionList = null;
+			}
+			if(partitionNameListCopy != null)
+			{
+				try{partitionNameListCopy.clear();}catch (Exception e) {}
+				partitionNameListCopy = null;
+			}
+			if(partitionListCopy != null)
+			{
+				try{partitionListCopy .clear();}catch (Exception e) {}
+				partitionListCopy  = null;
+			}
+			if(modificationVersion != null)
+			{
+				modificationVersion.clear();
+				modificationVersion = null;
+			}
+			if(snapshotVersion != null)
+			{
+				snapshotVersion.clear();
+				snapshotVersion = null;
+			}
+			openSnapshotVersionList = null;
+			firstPartition = null;
+			lastPartition = null;
+			
+			if(registeredChainEventHandlerList != null)
+			{
+				try {registeredChainEventHandlerList.clear();}catch (Exception e) {}
+				registeredChainEventHandlerList = null;
+			}
+			
+			if(registeredEventHandlerList != null)
+			{
+				try {registeredEventHandlerList.clear();}catch (Exception e) {}
+				registeredEventHandlerList = null;
+			}
+			
+			if(registeredEventHandlerList != null)
+			{
+				try {registeredEventHandlerList.clear();}catch (Exception e) {}
+				registeredEventHandlerList = null;
+			}
+			
+			if(_cachedRefactoredLinkageDefinition != null)
+			{
+				for(ChainsByPartition<E> chainsByPartition : _cachedRefactoredLinkageDefinition.values())
+				{
+					try
+					{
+						if(chainsByPartition.chains != null)
+						{
+							chainsByPartition.chains.clear();
+							chainsByPartition.chains = null;
+						}
+						chainsByPartition.partition = null;
+					}
+					catch (Exception e) {}
+				}
+				try{_cachedRefactoredLinkageDefinition.clear();}catch (Exception e) {}
+				_cachedRefactoredLinkageDefinition = null;
+			}
+			
+			if(_cachedChainsByPartition != null)
+			{
+				for(ChainsByPartition<E> chainsByPartition : _cachedChainsByPartition)
+				{
+					try
+					{
+						if(chainsByPartition.chains != null)
+						{
+							chainsByPartition.chains.clear();
+							chainsByPartition.chains = null;
+						}
+						chainsByPartition.partition = null;
+					}
+					catch (Exception e) {}
+				}
+				try{_cachedChainsByPartition.clear();}catch (Exception e) {}
+				_cachedChainsByPartition = null;
+			}
+			
+			uuid = null;
+			
+		}
+		finally 
+		{
+			writeLock.unlock();
 		}
 	}
 }

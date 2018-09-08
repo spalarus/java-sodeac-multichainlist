@@ -41,7 +41,7 @@ public class Partition<E>
 	protected volatile Partition<E> next = null;
 	protected Bollard partitionBegin = null;
 	protected Bollard partitionEnd = null;
-	private Map<String,LinkageDefinition<E>> privateLinkageDefinitions = null;
+	protected Map<String,LinkageDefinition<E>> privateLinkageDefinitions = null;
 	
 	public String getName()
 	{

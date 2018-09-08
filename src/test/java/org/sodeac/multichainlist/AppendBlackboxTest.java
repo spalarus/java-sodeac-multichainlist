@@ -73,6 +73,8 @@ public class AppendBlackboxTest
 		assertEquals("size of snapshot should be correct", content.size(),  index);
 
 		snapshot1.close();
+		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -209,6 +211,8 @@ public class AppendBlackboxTest
 		assertEquals("size of snapshot should be correct", content.size(),  index);
 
 		snapshot4.close();
+		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -232,6 +236,8 @@ public class AppendBlackboxTest
 		snapshot2.close();
 		
 		assertEquals("snapshotversion should not different", snapshot1.getVersion(),snapshot2.getVersion());
+		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -256,6 +262,8 @@ public class AppendBlackboxTest
 		snapshot2.close();
 		
 		assertEquals("snapshotversion should not different", snapshot1.getVersion(),snapshot2.getVersion());
+		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -293,6 +301,8 @@ public class AppendBlackboxTest
 		snapshot2.close();
 		
 		assertEquals("snapshotversion should not different", snapshot1.getVersion(),snapshot2.getVersion());
+		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -375,6 +385,8 @@ public class AppendBlackboxTest
 		
 		snapshot2.close();
 		
+		multiChainList.dispose();
+		
 	}
 	
 	@Test
@@ -440,6 +452,8 @@ public class AppendBlackboxTest
 		snapshot2.close();
 		
 		assertEquals("list size should be correct ", content1.size(), multiChainList.getSize());
+		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -551,6 +565,7 @@ public class AppendBlackboxTest
 				
 		snapshot1.close();
 		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -605,6 +620,8 @@ public class AppendBlackboxTest
 		}
 		assertEquals("size of snapshot should be correct", 0,  index);
 		snapshot2.close();
+		
+		multiChainList.dispose();
 	}
 	
 	@Test
@@ -661,5 +678,7 @@ public class AppendBlackboxTest
 		assertEquals("size of snapshot should be correct", content1.size(),  index);
 		
 		snapshot1.close();
+		
+		multiChainList.dispose();
 	}
 }
