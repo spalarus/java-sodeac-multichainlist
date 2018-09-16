@@ -66,7 +66,7 @@ public class ListEventHandlerBlackBoxTest
 		multiChainList.append("d2");
 		multiChainList.append("d3");
 		
-		assertEquals("list size should be correct ", 12L, multiChainList.getSize());
+		assertEquals("list size should be correct ", 12L, multiChainList.getNodeSize());
 		
 		Snapshot<String> snap1 = multiChainList.createImmutableSnapshot("chain1", null);
 		int index=0;

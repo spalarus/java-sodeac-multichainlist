@@ -15,7 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.sodeac.multichainlist.MultiChainList.ClearChainLink;
+import org.sodeac.multichainlist.MultiChainList.ClearCompleteForwardChain;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Node.Link;
 import org.sodeac.multichainlist.Partition.Eyebolt;
@@ -188,7 +188,7 @@ public class Chain<E>
 						
 						if(beginLink.olderVersion.nextLink != null)
 						{
-							chain.multiChainList.setObsolete(new ClearChainLink<E>(beginLink.olderVersion.nextLink));
+							chain.multiChainList.setObsolete(new ClearCompleteForwardChain<E>(beginLink.olderVersion.nextLink));
 							
 							Link<E> clearLink = beginLink.olderVersion.nextLink;
 							Link<E> nextLink;
@@ -208,7 +208,9 @@ public class Chain<E>
 								
 								clearLink = nextLink;
 							}
-						}						
+						}
+						
+						beginLink.olderVersion.clear();
 					}
 				}
 			}

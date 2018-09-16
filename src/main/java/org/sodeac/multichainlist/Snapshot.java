@@ -414,9 +414,9 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 				return false;
 			}
 			
-			if(this.next.version.getSequence() > Snapshot.this.version.getSequence())
+			if(this.next.createOnVersion.getSequence() > Snapshot.this.version.getSequence())
 			{
-				while(this.next.version.getSequence() > Snapshot.this.version.getSequence())
+				while(this.next.createOnVersion.getSequence() > Snapshot.this.version.getSequence())
 				{
 					this.next = this.next.olderVersion;
 					if(this.next == null)
@@ -424,17 +424,22 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 						this.previews = null;
 						throw new RuntimeException("mission link with version " + Snapshot.this.version.getSequence() );
 					}
+					if(this.next.createOnVersion  == null)
+					{
+						this.previews = null;
+						throw new RuntimeException("mission link with version " + Snapshot.this.version.getSequence() + " (older is cleared)");
+					}
 				}
 			}
-			else if(this.next.version.getSequence() < Snapshot.this.version.getSequence())
+			else if(this.next.createOnVersion.getSequence() < Snapshot.this.version.getSequence())
 			{
 				while(this.next.newerVersion != null)
 				{
-					if(this.next.newerVersion.version == null)
+					if(this.next.newerVersion.createOnVersion == null)
 					{
 						break;
 					}
-					if(this.next.newerVersion.version.getSequence() >  Snapshot.this.version.getSequence())
+					if(this.next.newerVersion.createOnVersion.getSequence() >  Snapshot.this.version.getSequence())
 					{
 						break;
 					}

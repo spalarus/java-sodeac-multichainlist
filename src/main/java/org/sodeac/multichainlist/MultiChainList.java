@@ -45,7 +45,7 @@ public class MultiChainList<E>
 		this.modificationVersion = new SnapshotVersion<E>(this,0L);
 		this.obsoleteList = new LinkedList<Link<E>>();
 		this.openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
-		this.size = 0L;
+		this.nodeSize = 0L;
 	}
 	
 	protected ReentrantReadWriteLock lock;
@@ -64,7 +64,7 @@ public class MultiChainList<E>
 	protected volatile Partition<E> lastPartition = null;
 	protected volatile LinkedList<IChainEventHandler<E>> registeredChainEventHandlerList = null;
 	protected volatile LinkedList<IListEventHandler<E>> registeredEventHandlerList = null;
-	protected volatile long size;
+	protected volatile long nodeSize;
 	
 	private Map<String,ChainsByPartition<E>> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition<E>>();
 	private LinkedList<ChainsByPartition<E>> _cachedChainsByPartition = new LinkedList<ChainsByPartition<E>>();
@@ -93,9 +93,9 @@ public class MultiChainList<E>
 		return modificationVersion;
 	}
 	
-	public long getSize()
+	public long getNodeSize()
 	{
-		return size;
+		return nodeSize;
 	}
 
 	public Node<E>[] append(Collection<E> elements)
@@ -472,7 +472,7 @@ public class MultiChainList<E>
 			
 			if(beginLink.olderVersion.nextLink != null)
 			{
-				setObsolete(new ClearChainLink<E>(beginLink.olderVersion.nextLink));
+				setObsolete(new ClearCompleteForwardChain<E>(beginLink.olderVersion.nextLink));
 				
 				Link<E> clearLink = beginLink.olderVersion.nextLink;
 				Link<E> nextLink;
@@ -739,18 +739,18 @@ public class MultiChainList<E>
 				while(! this.obsoleteList.isEmpty())
 				{
 					obsoleteLink = this.obsoleteList.getFirst();
-					if( minimalSnapshotVersionToKeep <= obsoleteLink.obsolete) 
+					if( minimalSnapshotVersionToKeep <= obsoleteLink.obsoleteOnVersion) 
 					{
 						// snapshot is created after link was made obsolete
 						break;
 					}
 					this.obsoleteList.removeFirst();
 					
-					if(obsoleteLink instanceof ClearChainLink)
+					if(obsoleteLink instanceof ClearCompleteForwardChain)
 					{
 
-						clearLink = ((ClearChainLink<E>)obsoleteLink).wrap;
-						((ClearChainLink<E>)obsoleteLink).wrap = null;
+						clearLink = ((ClearCompleteForwardChain<E>)obsoleteLink).wrap;
+						((ClearCompleteForwardChain<E>)obsoleteLink).wrap = null;
 						obsoleteLink.clear();
 						obsoleteLink  = clearLink;
 						
@@ -763,14 +763,6 @@ public class MultiChainList<E>
 							
 							clearLink = obsoleteLink;
 							obsoleteLink = obsoleteLink.nextLink;
-							if(obsoleteLink.olderVersion != null)
-							{
-								obsoleteLink.olderVersion.newerVersion = obsoleteLink.newerVersion;
-							}
-							if(obsoleteLink.newerVersion != null)
-							{
-								obsoleteLink.newerVersion.newerVersion = obsoleteLink.olderVersion;
-							}
 							clearLink.clear();
 						}
 					}
@@ -926,7 +918,12 @@ public class MultiChainList<E>
 	 */
 	protected void setObsolete(Link<E> link)
 	{
-		link.obsolete = modificationVersion.sequence;
+		link.obsoleteOnVersion = modificationVersion.sequence;
+		if(link.node != null)
+		{
+			// payload-link , not eyebolt
+			link.node.lastObsoleteOnVersion = link.obsoleteOnVersion;
+		}
 		this.obsoleteList.addLast(link);
 	}
 	
@@ -1092,10 +1089,10 @@ public class MultiChainList<E>
 		public Map<String,LinkageDefinition<E>> chains = new HashMap<String,LinkageDefinition<E>>();
 	}
 	
-	protected static class ClearChainLink<E> extends Link<E>
+	protected static class ClearCompleteForwardChain<E> extends Link<E>
 	{
 		private Link<E> wrap; 
-		protected ClearChainLink(Link<E> wrap)
+		protected ClearCompleteForwardChain(Link<E> wrap)
 		{
 			super();
 			this.wrap = wrap;

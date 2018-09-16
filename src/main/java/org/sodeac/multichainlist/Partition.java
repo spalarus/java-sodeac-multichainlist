@@ -108,12 +108,12 @@ public class Partition<E>
 			link = node.createHead(linkageDefinition, currentVersion, LinkMode.APPEND);
 
 			Link<E> previewsOfPreviews = null;
-			if((prev.version != currentVersion) && (prev != linkBegin))
+			if((prev.createOnVersion != currentVersion) && (prev != linkBegin))
 			{
 				// if prev == linkBegin => chainBegin does not require new link-begin-version, 
 				// because snapshots links first payload link and current version has nothing to clean on snapshot.close()
 				
-				if(prev.version.getSequence() < currentVersion.getSequence())
+				if(prev.createOnVersion.getSequence() < currentVersion.getSequence())
 				{
 					if(! multiChainList.openSnapshotVersionList.isEmpty())
 					{
@@ -482,7 +482,7 @@ public class Partition<E>
 				boolean isCleared = link == null;
 				boolean isEndpoint = link instanceof Eyebolt;
 				
-				builder.append("Analyse Link " + Integer.toHexString(link.hashCode()) + " - obsolete: " +  link.obsolete + " - cleared " + isCleared + " - endpoint: " + isEndpoint + " - value: " + link.getElement() + "\n");
+				builder.append("Analyse Link " + Integer.toHexString(link.hashCode()) + " - obsolete: " +  link.obsoleteOnVersion + " - cleared " + isCleared + " - endpoint: " + isEndpoint + " - value: " + link.getElement() + "\n");
 				if(link.olderVersion != null)
 				{
 					if(! handled.contains(link.olderVersion))

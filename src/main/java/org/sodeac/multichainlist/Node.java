@@ -34,6 +34,7 @@ public class Node<E>
 	protected E element = null;
 	protected Link<E> headOfDefaultChain = null;
 	protected Map<String,Link<E>> headsOfAdditionalChains = null;
+	protected volatile long lastObsoleteOnVersion = Link.NO_OBSOLETE;
 	private volatile int linkSize = 0;
 	
 	@SuppressWarnings("unchecked")
@@ -275,7 +276,7 @@ public class Node<E>
 		Link<E> previewsOfPreviews = null;
 		if(next != linkEnd)
 		{
-			if(next.version.getSequence() < currentVersion.getSequence())
+			if(next.createOnVersion.getSequence() < currentVersion.getSequence())
 			{
 				if(! multiChainList.openSnapshotVersionList.isEmpty())
 				{
@@ -287,7 +288,7 @@ public class Node<E>
 			}
 		}
 		
-		if(prev.version.getSequence() < currentVersion.getSequence())
+		if(prev.createOnVersion.getSequence() < currentVersion.getSequence())
 		{
 			if(! multiChainList.openSnapshotVersionList.isEmpty())
 			{
@@ -330,6 +331,8 @@ public class Node<E>
 		
 		if(multiChainList.openSnapshotVersionList.isEmpty())
 		{
+			link.obsoleteOnVersion = currentVersion.getSequence();
+			link.node.lastObsoleteOnVersion = link.obsoleteOnVersion;
 			link.clear();
 		}
 		else
@@ -485,11 +488,11 @@ public class Node<E>
 			{
 				if((linkSize >  0L) && (startsWithEmptyState))
 				{
-					multiChainList.size++;
+					multiChainList.nodeSize++;
 				}
 				else if((linkSize == 0L) && (!startsWithEmptyState))
 				{
-					multiChainList.size--;
+					multiChainList.nodeSize--;
 				}
 			}
 		}
@@ -521,7 +524,7 @@ public class Node<E>
 			this.linkageDefinition = linkageDefinition;
 			this.node = node;
 			this.element = node.element;
-			this.version = version;
+			this.createOnVersion = version;
 		}
 		
 		protected Link()
@@ -530,14 +533,14 @@ public class Node<E>
 			this.linkageDefinition = null;
 			this.node = null;
 			this.element = null;
-			this.version = null;
+			this.createOnVersion = null;
 		}
 		
-		protected volatile long obsolete = NO_OBSOLETE;
+		protected volatile long obsoleteOnVersion = NO_OBSOLETE;
 		protected volatile LinkageDefinition<E> linkageDefinition;
 		protected volatile Node<E> node;
 		protected volatile E element;
-		protected volatile SnapshotVersion<E> version;
+		protected volatile SnapshotVersion<E> createOnVersion;
 		protected volatile Link<E> newerVersion= null;
 		protected volatile Link<E> olderVersion= null;
 		protected volatile Link<E> previewsLink= null;
@@ -582,13 +585,13 @@ public class Node<E>
 		{
 			if(this.node != null)
 			{
-				if(this.node.linkSize == 0)
+				if((this.node.linkSize == 0) && (this.node.lastObsoleteOnVersion == this.obsoleteOnVersion))
 				{
 					this.node.clear();
 				}
 			}
 			this.linkageDefinition = null;
-			this.version = null;
+			this.createOnVersion = null;
 			this.newerVersion = null;
 			this.olderVersion = null;
 			this.previewsLink = null;
@@ -603,7 +606,7 @@ public class Node<E>
 			return
 			node == null ? "link-version cleared away" : 
 			(
-				"lVersion " + this.version.getSequence() 
+				"lVersion " + this.createOnVersion.getSequence() 
 					+ " hasNewer: " + (newerVersion != null) 
 					+ " hasOlder: " + (olderVersion != null)
 			);
