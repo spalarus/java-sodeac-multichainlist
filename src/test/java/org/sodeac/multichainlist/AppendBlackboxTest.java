@@ -681,4 +681,33 @@ public class AppendBlackboxTest
 		
 		multiChainList.dispose();
 	}
+	
+	@Test
+	public void test00130AppendChain() throws Exception
+	{
+		MultiChainList<String> multiChainList = new MultiChainList<String>();
+		
+		
+		Chain<String> chain = multiChainList.chain(null);
+		
+		List<String> content1 = new ArrayList<String>();
+		content1.add("1");
+		content1.add("2");
+		chain.append(content1, null);
+		
+		chain.append("3", null);
+		
+		content1 = new ArrayList<String>();
+		content1.add("4");
+		content1.add("5");
+		content1.add("6");
+		
+		multiChainList.definePartition("P");
+		
+		chain.append(content1, "P");
+		
+		assertEquals("size should be correct", 6, multiChainList.getNodeSize());
+		assertEquals("size should be correct", 3, multiChainList.getPartition(null).getSize(null));
+		assertEquals("size should be correct", 3, multiChainList.getPartition("P").getSize(null));
+	}
 }

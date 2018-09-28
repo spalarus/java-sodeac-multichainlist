@@ -11,9 +11,14 @@
 package org.sodeac.multichainlist;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.sodeac.multichainlist.MultiChainList.ClearCompleteForwardChain;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
@@ -26,6 +31,8 @@ public class Chain<E>
 	private String chainName = null;
 	private Partition<?>[] partitions = null;
 	private Partition<?>[] allPartitions = null;
+	private volatile Map<String,List<LinkageDefinition<E>>> definitionIndex = null;
+	private Lock definitionIndexLock = null;
 	
 	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<?>[] partitions)
 	{
@@ -33,6 +40,8 @@ public class Chain<E>
 		this.multiChainList = multiChainList;
 		this.chainName = chainName;
 		this.partitions = partitions;
+		this.definitionIndex = null;
+		this.definitionIndexLock = new ReentrantLock();
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -50,6 +59,99 @@ public class Chain<E>
 		return (Partition<E>[])allPartitions;
 	}
 	
+	private List<LinkageDefinition<E>> getLinkageDefinition(String partitionName)
+	{
+		List<LinkageDefinition<E>> linkageDefinitionList = null;
+		Map<String,List<LinkageDefinition<E>>> index = this.definitionIndex;
+		if(index != null)
+		{
+			linkageDefinitionList = index.get(partitionName);
+			if(linkageDefinitionList != null)
+			{
+				return linkageDefinitionList;
+			}
+		}
+		this.definitionIndexLock.lock();
+		try
+		{
+			if(this.definitionIndex != null)
+			{
+				linkageDefinitionList = this.definitionIndex.get(partitionName);
+				if(linkageDefinitionList != null)
+				{
+					return linkageDefinitionList;
+				}
+			}
+			
+			LinkageDefinition<E> linkageDefinition = new LinkageDefinition<>(this.chainName, this.multiChainList.getPartition(partitionName));
+			linkageDefinitionList = new ArrayList<>(1);
+			linkageDefinitionList.add(linkageDefinition);
+			index = new HashMap<String,List<LinkageDefinition<E>>>();
+			if(this.definitionIndex != null)
+			{
+				index.putAll(this.definitionIndex);
+			}
+			index.put(partitionName, linkageDefinitionList);
+			 // TODO old definitionIndex should cleared, but not yet
+			this.definitionIndex = index;			
+		}
+		finally 
+		{
+			this.definitionIndexLock.unlock();
+		}
+		return linkageDefinitionList;
+	}
+	
+	public final Node<E> append(E element, String partitionName)
+	{
+		return this.multiChainList.append(element, getLinkageDefinition(partitionName));
+	}
+	
+	public Node<E>[] append(Collection<E> elements, String partitionName)
+	{
+		return this.multiChainList.append(elements, getLinkageDefinition(partitionName));
+	}
+	
+	public final Node<E> prepend(E element, String partitionName)
+	{
+		return this.multiChainList.prepend(element, getLinkageDefinition(partitionName));
+	}
+	
+	public Node<E>[] prepend(Collection<E> elements, String partitionName)
+	{
+		return this.multiChainList.prepend(elements, getLinkageDefinition(partitionName));
+	}
+	
+	public void close()
+	{
+		definitionIndexLock.lock();
+		try
+		{
+			if(definitionIndex != null)
+			{
+				for(List<LinkageDefinition<E>> list : definitionIndex.values())
+				{
+					if(list != null)
+					{
+						list.clear();
+					}
+				}
+				definitionIndex.clear();
+			}
+		}
+		finally 
+		{
+			definitionIndexLock.unlock();
+		}
+		this.multiChainList = null;
+		this.chainName = null;
+		this.partitions = null;
+		this.allPartitions = null;
+		this.definitionIndex = null;
+		this.definitionIndexLock = null;
+	}
+	
+	// TODO test
 	public void clear()
 	{
 		multiChainList.writeLock.lock();
