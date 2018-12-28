@@ -84,6 +84,11 @@ public class Partition<E>
 				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
 			}
 			linkageDefinition = privateLinkageDefinition;
+			link = node.getLink(linkageDefinition.getChainName());
+			if(link != null)
+			{
+				throw new ChainConflictException(linkageDefinition.getChainName(),node);
+			}
 			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
 			if(linkBegin == null)
 			{
@@ -161,6 +166,11 @@ public class Partition<E>
 				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
 			}
 			linkageDefinition = privateLinkageDefinition;
+			link = node.getLink(linkageDefinition.getChainName());
+			if(link != null)
+			{
+				throw new ChainConflictException(linkageDefinition.getChainName(),node);
+			}
 			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
 			if(linkBegin == null)
 			{
@@ -184,7 +194,7 @@ public class Partition<E>
 			
 			link = node.createHead(linkageDefinition, currentVersion, LinkMode.PREPEND);
 
-			// Save Water ....
+			// save water ...
 			
 			// link new link with nextlink
 			next.previewsLink = link;

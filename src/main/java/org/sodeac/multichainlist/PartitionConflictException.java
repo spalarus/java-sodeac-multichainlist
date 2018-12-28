@@ -25,6 +25,9 @@ public class PartitionConflictException extends RuntimeException
 	public PartitionConflictException(String chainName,Partition<?> alreadyInChainPartition, Partition<?> conflictPartition, Node<?> node)
 	{
 		super("chain " + chainName + " can not insert node into partition " + conflictPartition + ", because it already exists in " + alreadyInChainPartition );
+		this.chainName = chainName;
+		this.alreadyInChainPartition = alreadyInChainPartition;
+		this.conflictPartition = conflictPartition;
 	}
 
 	public String getChainName()

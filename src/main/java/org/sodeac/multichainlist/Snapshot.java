@@ -422,12 +422,12 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 					if(this.next == null)
 					{
 						this.previews = null;
-						throw new RuntimeException("mission link with version " + Snapshot.this.version.getSequence() );
+						throw new RuntimeException("missing link with version " + Snapshot.this.version.getSequence() );
 					}
 					if(this.next.createOnVersion  == null)
 					{
 						this.previews = null;
-						throw new RuntimeException("mission link with version " + Snapshot.this.version.getSequence() + " (older is cleared)");
+						throw new RuntimeException("missing link with version " + Snapshot.this.version.getSequence() + " (older is cleared)");
 					}
 				}
 			}

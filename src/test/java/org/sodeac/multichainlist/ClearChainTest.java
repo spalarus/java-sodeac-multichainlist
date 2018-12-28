@@ -12,7 +12,7 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class ClearTest
+public class ClearChainTest
 {
 	@Test
 	public void test00001clearWithoutSnapshot() throws Exception
@@ -27,7 +27,7 @@ public class ClearTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		multiChainList.clear(null, null);
+		multiChainList.chain(null).clear();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		
@@ -55,7 +55,7 @@ public class ClearTest
 		
 		Snapshot<String> snapshot = multiChainList.createImmutableSnapshot(null, null);
 		
-		multiChainList.clear(null, null);
+		multiChainList.chain(null).clear();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		
@@ -101,7 +101,7 @@ public class ClearTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot = multiChainList.createImmutableSnapshotPoll(null, null);
+		Snapshot<String> snapshot = multiChainList.chain(null).createImmutableSnapshotPoll();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		
@@ -147,9 +147,9 @@ public class ClearTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshotX = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshotX = multiChainList.chain(null).createImmutableSnapshot();
 		
-		Snapshot<String> snapshot = multiChainList.createImmutableSnapshotPoll(null, null);
+		Snapshot<String> snapshot = multiChainList.chain(null).createImmutableSnapshotPoll();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		

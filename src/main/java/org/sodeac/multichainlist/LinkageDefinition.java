@@ -10,6 +10,15 @@
  *******************************************************************************/
 package org.sodeac.multichainlist;
 
+/**
+ * A linkage definition defines the position in list (chain and partition).
+ * 
+ * @author Sebastian Palarus
+ * @since 1.0
+ * @version 1.0
+ *
+ * @param <E>
+ */
 public class LinkageDefinition<E>
 {
 	public LinkageDefinition(String chainName,Partition<E> partition)

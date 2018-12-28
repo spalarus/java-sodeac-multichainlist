@@ -11,6 +11,7 @@
 package org.sodeac.multichainlist;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -92,7 +93,6 @@ public class Chain<E>
 				index.putAll(this.definitionIndex);
 			}
 			index.put(partitionName, linkageDefinitionList);
-			 // TODO old definitionIndex should cleared, but not yet
 			this.definitionIndex = index;			
 		}
 		finally 
@@ -102,24 +102,45 @@ public class Chain<E>
 		return linkageDefinitionList;
 	}
 	
-	public final Node<E> append(E element, String partitionName)
+	public final Node<E> append(E element)
+	{
+		return append(null,element);
+	}
+	
+	public final Node<E> append(String partitionName, E element)
 	{
 		return this.multiChainList.append(element, getLinkageDefinition(partitionName));
 	}
 	
-	public Node<E>[] append(Collection<E> elements, String partitionName)
+	@SafeVarargs
+	public final Node<E>[] appendAll(String partitionName, E... elements)
 	{
-		return this.multiChainList.append(elements, getLinkageDefinition(partitionName));
+		return this.multiChainList.appendAll(Arrays.<E>asList(elements), getLinkageDefinition(partitionName));
 	}
 	
-	public final Node<E> prepend(E element, String partitionName)
+	public Node<E>[] appendAll(String partitionName, Collection<E> elements)
+	{
+		return this.multiChainList.appendAll(elements, getLinkageDefinition(partitionName));
+	}
+	
+	public final Node<E> prepend(E element)
+	{
+		return this.prepend(null, element);
+	}
+	public final Node<E> prepend(String partitionName, E element)
 	{
 		return this.multiChainList.prepend(element, getLinkageDefinition(partitionName));
 	}
 	
-	public Node<E>[] prepend(Collection<E> elements, String partitionName)
+	@SafeVarargs
+	public final Node<E>[] prependAll(String partitionName, E... elements)
 	{
-		return this.multiChainList.prepend(elements, getLinkageDefinition(partitionName));
+		return this.multiChainList.prependAll(Arrays.<E>asList(elements), getLinkageDefinition(partitionName));
+	}
+	
+	public Node<E>[] prependAll(String partitionName, Collection<E> elements)
+	{
+		return this.multiChainList.prependAll(elements, getLinkageDefinition(partitionName));
 	}
 	
 	public void close()
@@ -151,7 +172,6 @@ public class Chain<E>
 		this.definitionIndexLock = null;
 	}
 	
-	// TODO test
 	public void clear()
 	{
 		multiChainList.writeLock.lock();

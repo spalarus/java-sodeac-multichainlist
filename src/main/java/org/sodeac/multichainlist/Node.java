@@ -22,6 +22,17 @@ import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Partition.Eyebolt;
 import org.sodeac.multichainlist.Partition.LinkMode;
 
+/**
+ * A Node is a container manages the location of one inserted element. A node is removed, if it is not linked with one of chains anymore. 
+ * 
+ * <p> A node can exists only one time in a chain.
+ * 
+ * @author Sebastian Palarus
+ * @since 1.0
+ * @version 1.0
+ *
+ * @param <E>
+ */
 public class Node<E>
 {
 	protected Node(E element, MultiChainList<E> parent)
@@ -191,6 +202,43 @@ public class Node<E>
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
+	public void relink(String fromChain, LinkageDefinition<E> linkageDefinition, Partition.LinkMode linkMode)
+	{
+		if(linkageDefinition == null)
+		{
+			linkageDefinition = (LinkageDefinition<E>)MultiChainList.DEFAULT_CHAIN_SETTING;
+		}
+		Partition<E> partition = multiChainList.getPartition(linkageDefinition.getPartition() == null ? null : linkageDefinition.getPartition().getName());
+		if(partition == null)
+		{
+			throw new NullPointerException("Partition " + linkageDefinition.getPartition() + " not found");
+		}
+		multiChainList.getWriteLock().lock();
+		try
+		{
+			String toChain = linkageDefinition.getChainName();
+			Link<E> source = getLink(fromChain);
+			
+			if(source != null)
+			{
+				unlink(source, false);
+			}
+			
+			Link<E> destination = getLink(toChain);
+			if(destination != null)
+			{
+				unlink(destination, false);
+			}
+			
+			link(toChain, linkageDefinition.getPartition() , linkMode);
+		}
+		finally 
+		{
+			multiChainList.getWriteLock().unlock();
+		}
+	}
+	
 	public final void unlinkAllChains()
 	{
 		if(! isPayload())
@@ -238,7 +286,7 @@ public class Node<E>
 			{
 				return false;
 			}
-			return unlink(link);
+			return unlink(link,true);
 		}
 		finally 
 		{
@@ -247,7 +295,7 @@ public class Node<E>
 		
 	}
 	
-	private final boolean unlink(Link<E> link)
+	private final boolean unlink(Link<E> link, boolean nodeClear)
 	{
 		if(! isPayload())
 		{
@@ -333,7 +381,7 @@ public class Node<E>
 		{
 			link.obsoleteOnVersion = currentVersion.getSequence();
 			link.node.lastObsoleteOnVersion = link.obsoleteOnVersion;
-			link.clear();
+			link.clear(nodeClear);
 		}
 		else
 		{
@@ -515,6 +563,13 @@ public class Node<E>
 		return "Node payload: " + isPayload() ;
 	}
 	
+	/**
+	 * Intern helper class link the elements / nodes between themselves
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 * @param <E>
+	 */
 	protected static class Link<E>
 	{
 		public static final long NO_OBSOLETE = -1L;
@@ -583,9 +638,14 @@ public class Node<E>
 
 		protected void clear()
 		{
+			clear(true);
+		}
+		
+		private void clear(boolean nodeClear)
+		{
 			if(this.node != null)
 			{
-				if((this.node.linkSize == 0) && (this.node.lastObsoleteOnVersion == this.obsoleteOnVersion))
+				if(nodeClear && (this.node.linkSize == 0) && (this.node.lastObsoleteOnVersion == this.obsoleteOnVersion))
 				{
 					this.node.clear();
 				}

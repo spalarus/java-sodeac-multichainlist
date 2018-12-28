@@ -29,6 +29,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.sodeac.multichainlist.Node.Link;
 import org.sodeac.multichainlist.Partition.Eyebolt;
 
+/**
+ * Snapshotable list with 1..n chains. 
+ * 
+ * @author Sebastian Palarus
+ * @since 1.0
+ * @version 1.0
+ * 
+ * @param <E>
+ */
 public class MultiChainList<E>
 {
 	public  MultiChainList()
@@ -76,6 +85,15 @@ public class MultiChainList<E>
 	
 	private UUID uuid = null;
 	
+	/**
+	 * Intern helper method returns current modification version. This method must invoke with MCL.writeLock !
+	 * 
+	 * <br> Current modification version must be higher than current snapshot version.
+	 * 
+	 * <p>Note: This is intern 
+	 * 
+	 * @return
+	 */
 	protected SnapshotVersion<E> getModificationVersion()
 	{
 		if(snapshotVersion != null)
@@ -93,52 +111,127 @@ public class MultiChainList<E>
 		return modificationVersion;
 	}
 	
+	/**
+	 * Getter for node size. Node size describes the count of all {@link Node}s in List.
+	 * 
+	 * @return node size
+	 */
 	public long getNodeSize()
 	{
 		return nodeSize;
 	}
-
-	public Node<E>[] append(Collection<E> elements)
+	
+	/*
+	 * append single element
+	 */
+	
+	public Node<E> append(E element)
 	{
-		return append(elements, DEFAULT_CHAIN_SETTING_LIST);
+		return append(element, DEFAULT_CHAIN_SETTING_LIST);
 	}
 	
 	@SafeVarargs
-	public final Node<E>[] append(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
+	public final Node<E> append(E element, LinkageDefinition<E>... linkageDefinitions)
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return append(elements, DEFAULT_CHAIN_SETTING_LIST);
+			return append(element, DEFAULT_CHAIN_SETTING_LIST);
 		}
-		return append(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
+		return append(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
+	}
+	
+	public Node<E> append(E element, List<LinkageDefinition<E>> linkageDefinitions)
+	{
+		return add(element, linkageDefinitions, Partition.LinkMode.APPEND);
+	}
+	
+	/*
+	 * append element list
+	 */
+
+	@SafeVarargs
+	public final Node<E>[] appendAll(E... elements)
+	{
+		return appendAll(Arrays.<E>asList(elements));
+	}
+	
+	public Node<E>[] appendAll(Collection<E> elements)
+	{
+		return appendAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+	}
+	
+	@SafeVarargs
+	public final Node<E>[] appendAll(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
+	{
+		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		{
+			return appendAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+		}
+		return appendAll(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
 		
 	}
 	
-	public Node<E>[] append(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
+	public Node<E>[] appendAll(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
 	{
 		return add(elements, linkageDefinitions, Partition.LinkMode.APPEND);
 	}
 	
-	public Node<E>[] prepend(Collection<E> elements)
+	/*
+	 * prepend single element
+	 */
+	
+	public Node<E> prepend(E element)
 	{
-		return prepend(elements, DEFAULT_CHAIN_SETTING_LIST);
+		return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
 	}
 	
 	@SafeVarargs
-	public final Node<E>[] prepend(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
+	public final Node<E> prepend(E element, LinkageDefinition<E>... linkageDefinitions)
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return prepend(elements, DEFAULT_CHAIN_SETTING_LIST);
+			return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
 		}
-		return prepend(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
+		return prepend(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
+	}
+	
+	public Node<E> prepend(E element, List<LinkageDefinition<E>> linkageDefinitions)
+	{
+		return add(element, linkageDefinitions, Partition.LinkMode.PREPEND);
+	}
+	
+	/*
+	 * prepend element list
+	 */
+	
+	@SafeVarargs
+	public final Node<E>[] prependAll(E... elements)
+	{
+		return prependAll(Arrays.<E>asList(elements));
+	}
+	
+	public Node<E>[] prependAll(Collection<E> elements)
+	{
+		return prependAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+	}
+	
+	@SafeVarargs
+	public final Node<E>[] prependAll(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
+	{
+		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
+		{
+			return prependAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+		}
+		return prependAll(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
 		
 	}
 	
-	public Node<E>[] prepend(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
+	public Node<E>[] prependAll(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
 	{
 		return add(elements, linkageDefinitions, Partition.LinkMode.PREPEND);
 	}
+	
+	// intern method append/prepend
 	
 	@SuppressWarnings("unchecked")
 	private Node<E>[] add(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
@@ -184,14 +277,14 @@ public class MultiChainList<E>
 			Node<E> node = null;
 			getModificationVersion();
 			
-			refactorLinkageDefintions(linkageDefinitions);
+			Map<String,ChainsByPartition<E>> chainsGroupedByPartition = refactorLinkageDefintions(linkageDefinitions);
 			
 			int index = 0;
 			for(E element : elements)
 			{
 				node = new Node<E>(element,this);
 				nodes[index++] = node;
-				for(ChainsByPartition<E> chainsByPartition : refactorLinkageDefintions(linkageDefinitions).values())
+				for(ChainsByPartition<E> chainsByPartition : chainsGroupedByPartition.values())
 				{
 					if(linkMode == Partition.LinkMode.PREPEND)
 					{
@@ -210,46 +303,6 @@ public class MultiChainList<E>
 			writeLock.unlock();
 		}
 		return nodes;
-	}
-	
-	public Node<E> append(E element)
-	{
-		return append(element, DEFAULT_CHAIN_SETTING_LIST);
-	}
-	
-	@SafeVarargs
-	public final Node<E> append(E element, LinkageDefinition<E>... linkageDefinitions)
-	{
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
-		{
-			return append(element, DEFAULT_CHAIN_SETTING_LIST);
-		}
-		return append(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
-	}
-	
-	public Node<E> append(E element, List<LinkageDefinition<E>> linkageDefinitions)
-	{
-		return add(element, linkageDefinitions, Partition.LinkMode.APPEND);
-	}
-	
-	public Node<E> prepend(E element)
-	{
-		return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
-	}
-	
-	@SafeVarargs
-	public final Node<E> prepend(E element, LinkageDefinition<E>... linkageDefinitions)
-	{
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
-		{
-			return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
-		}
-		return prepend(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
-	}
-	
-	public Node<E> prepend(E element, List<LinkageDefinition<E>> linkageDefinitions)
-	{
-		return add(element, linkageDefinitions, Partition.LinkMode.PREPEND);
 	}
 	
 	private Node<E> add(E element, List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
@@ -289,10 +342,10 @@ public class MultiChainList<E>
 		{
 			getModificationVersion();
 			
-			refactorLinkageDefintions(linkageDefinitions);
+			Map<String,ChainsByPartition<E>> chainsGroupedByPartition = refactorLinkageDefintions(linkageDefinitions);
 			
 			node = new Node<E>(element,this);
-			for(ChainsByPartition<E> chainsByPartition : refactorLinkageDefintions(linkageDefinitions).values())
+			for(ChainsByPartition<E> chainsByPartition : chainsGroupedByPartition.values())
 			{
 				if(linkMode == Partition.LinkMode.PREPEND)
 				{
@@ -692,11 +745,24 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * get Chain with all Partitions
+	 * 
+	 * @param chainName
+	 * @return
+	 */
 	public Chain<E> chain( String chainName)
 	{
 		return new Chain<E>(this, chainName, null);
 	}
 	
+	/**
+	 * get Chain with  defined partitions
+	 * 
+	 * @param chainName
+	 * @param partitions
+	 * @return
+	 */
 	public Chain<E> chain( String chainName, Partition<?>... partitions)
 	{
 		return new Chain<E>(this, chainName, partitions);
@@ -927,8 +993,12 @@ public class MultiChainList<E>
 		this.obsoleteList.addLast(link);
 	}
 	
-	/*
-	 * Must run in write lock !!!!
+	/**
+	 * Intern helper method. Must run in write lock and return value is processed in write lock. 
+	 * 
+	 * @param linkageDefinitions 
+	 * 
+	 * @return all nodes grouped by partition
 	 */
 	protected Map<String,ChainsByPartition<E>> refactorLinkageDefintions(Collection<LinkageDefinition<E>> linkageDefinitions)
 	{
