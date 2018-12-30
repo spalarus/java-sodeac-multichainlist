@@ -207,7 +207,7 @@ public class Node<E>
 	{
 		if(linkageDefinition == null)
 		{
-			linkageDefinition = (LinkageDefinition<E>)MultiChainList.DEFAULT_CHAIN_SETTING;
+			linkageDefinition = (LinkageDefinition<E>)this.multiChainList.defaultLinkageDefinition;
 		}
 		Partition<E> partition = multiChainList.getPartition(linkageDefinition.getPartition() == null ? null : linkageDefinition.getPartition().getName());
 		if(partition == null)

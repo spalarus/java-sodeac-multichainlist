@@ -53,7 +53,7 @@ public class ClearChainTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot = multiChainList.chain(null).createImmutableSnapshot();
 		
 		multiChainList.chain(null).clear();
 		

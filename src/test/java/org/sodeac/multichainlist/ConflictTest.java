@@ -18,7 +18,7 @@ public class ConflictTest
 		
 		try
 		{
-			node.link(multiChainList.DEFAULT_CHAIN_SETTINGS, LinkMode.APPEND);
+			node.link(multiChainList.getDefaultLinkageDefinitionList(), LinkMode.APPEND);
 		}
 		catch (ChainConflictException e) 
 		{

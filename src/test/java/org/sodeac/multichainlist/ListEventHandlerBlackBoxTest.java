@@ -68,7 +68,7 @@ public class ListEventHandlerBlackBoxTest
 		
 		assertEquals("list size should be correct ", 12L, multiChainList.getNodeSize());
 		
-		Snapshot<String> snap1 = multiChainList.createImmutableSnapshot("chain1", null);
+		Snapshot<String> snap1 = multiChainList.chain("chain1").createImmutableSnapshot();
 		int index=0;
 		for(String str : snap1)
 		{
@@ -79,7 +79,7 @@ public class ListEventHandlerBlackBoxTest
 		assertEquals("snapsize should be correct", 3, snap1.size());
 		snap1.close();
 		
-		Snapshot<String> snap2 = multiChainList.createImmutableSnapshot("chain2", null);
+		Snapshot<String> snap2 = multiChainList.chain("chain2").createImmutableSnapshot();
 		index=0;
 		for(String str : snap2)
 		{
@@ -90,7 +90,7 @@ public class ListEventHandlerBlackBoxTest
 		assertEquals("snapsize should be correct", 3, snap2.size());
 		snap2.close();
 		
-		Snapshot<String> snap3 = multiChainList.createImmutableSnapshot("chain3", null);
+		Snapshot<String> snap3 = multiChainList.chain("chain3").createImmutableSnapshot();
 		index=0;
 		for(String str : snap3)
 		{
@@ -101,7 +101,7 @@ public class ListEventHandlerBlackBoxTest
 		assertEquals("snapsize should be correct", 3, snap3.size());
 		snap3.close();
 		
-		Snapshot<String> snap4 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snap4 = multiChainList.chain(null).createImmutableSnapshot();
 		index=0;
 		for(String str : snap4)
 		{

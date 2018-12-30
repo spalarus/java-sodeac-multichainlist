@@ -45,7 +45,7 @@ public class AppendBlackboxTest
 		assertEquals("chain size should be correct ", content.size(), partition.getSize(null));
 		assertEquals("chain first element should be correct ", "1", partition.getFirstElement(null));
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot first element should be correct ", "1", snapshot1.getFirstElement());
 		assertEquals("snapshot first link should be correct ", "1", snapshot1.getFirstLink().getElement());
@@ -100,7 +100,7 @@ public class AppendBlackboxTest
 		assertEquals("chain size should be correct ", content.size(), partition.getSize(null));
 		assertEquals("chain first element should be correct ", "1", partition.getFirstElement(null));
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot first element should be correct ", "1", snapshot1.getFirstElement());
 		assertEquals("snapshot first link should be correct ", "1", snapshot1.getFirstLink().getElement());
@@ -135,7 +135,7 @@ public class AppendBlackboxTest
 				new LinkageDefinition("test2",partition2)
 		};
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot("test",null);
+		Snapshot<String> snapshot2 = multiChainList.chain("test").createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
 		assertEquals("snapshot first element should be correct ", "1", snapshot2.getFirstElement());
 		assertEquals("snapshot first link should be correct ", "1", snapshot2.getFirstLink().getElement());
@@ -170,7 +170,7 @@ public class AppendBlackboxTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot3 = multiChainList.createImmutableSnapshot("test",null);
+		Snapshot<String> snapshot3 = multiChainList.chain("test").createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot3);
 		assertEquals("snapshot size should be correct", 0 ,snapshot3.size());
 		
@@ -183,7 +183,7 @@ public class AppendBlackboxTest
 
 		snapshot3.close();
 		
-		Snapshot<String> snapshot4 = multiChainList.createImmutableSnapshot("test2","part2");
+		Snapshot<String> snapshot4 = multiChainList.chain("test2",partition2).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot4);
 		assertEquals("snapshot first element should be correct ", "1", snapshot4.getFirstElement());
 		assertEquals("snapshot first link should be correct ", "1", snapshot4.getFirstLink().getElement());
@@ -225,12 +225,12 @@ public class AppendBlackboxTest
 		content.add("3");
 		multiChainList.appendAll(content);
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot.size() should be correct ", content.size(), snapshot1.size());
 		assertNotNull("snapshot should not be null", snapshot1);
 		snapshot1.close();
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot.size() should be correct ", content.size(), snapshot2.size());
 		assertNotNull("snapshot should not be null", snapshot2);
 		snapshot2.close();
@@ -250,11 +250,11 @@ public class AppendBlackboxTest
 		content.add("3");
 		multiChainList.appendAll(content);
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content.size(), snapshot1.size());
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
 		assertEquals("snapshot.size() should be correct ", content.size(), snapshot2.size());
 		
@@ -284,7 +284,7 @@ public class AppendBlackboxTest
 		
 		assertEquals("list size should be correct ", content1.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		assertNotNull("snapshot should not be null", snapshot1);
 		
@@ -294,7 +294,7 @@ public class AppendBlackboxTest
 		
 		assertEquals("list size should be correct ", content1.size() + content2.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
 		assertEquals("snapshot.size() should be correct ", content1.size() + content2.size(), snapshot2.size());
 		
@@ -322,13 +322,13 @@ public class AppendBlackboxTest
 		
 		Node<String>[] nodes1 = multiChainList.appendAll(content1);
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		
 		Node<String>[] nodes2 = multiChainList.appendAll(content2);
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
 		assertEquals("snapshot.size() should be correct ", contentX.size(), snapshot2.size());
 		
@@ -410,7 +410,7 @@ public class AppendBlackboxTest
 		assertNotNull("node2 should not be null", node2);
 		assertNotNull("node3 should not be null", node3);
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		
@@ -420,7 +420,7 @@ public class AppendBlackboxTest
 		
 		assertEquals("list size should be correct ", content1.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot2.size());
 		
@@ -461,7 +461,7 @@ public class AppendBlackboxTest
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<String>();
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot1 size should be correct",0, snapshot1.size());
 		
 		// test snapshot 1
@@ -476,7 +476,7 @@ public class AppendBlackboxTest
 		content1.add("1");
 		
 		multiChainList.appendAll(content1);
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot2 size should be correct",content1.size(), snapshot2.size());
 		
 		// test snapshot 2
@@ -504,7 +504,7 @@ public class AppendBlackboxTest
 		content2.add("1");
 		content2.add("2");
 		
-		Snapshot<String> snapshot3 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot3 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot1 size should be correct",content2.size(), snapshot3.size());
 		
 		// test snapshot 3
@@ -578,7 +578,7 @@ public class AppendBlackboxTest
 		multiChainList.appendAll(content1);
 
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		
@@ -592,7 +592,7 @@ public class AppendBlackboxTest
 		
 		snapshot1.getLink("1").unlink();
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
 		assertEquals("snapshot.size() should be correct ", 0, snapshot2.size());
 		
@@ -634,7 +634,7 @@ public class AppendBlackboxTest
 		multiChainList.appendAll(content1);
 
 		
-		Snapshot<String> snapshot1 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		
@@ -648,7 +648,7 @@ public class AppendBlackboxTest
 		
 		snapshot1.getLink("1").unlink();
 		
-		Snapshot<String> snapshot2 = multiChainList.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
 		assertEquals("snapshot.size() should be correct ", 0, snapshot2.size());
 		

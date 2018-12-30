@@ -25,32 +25,83 @@ import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.function.Consumer;
 
 import org.sodeac.multichainlist.Node.Link;
 import org.sodeac.multichainlist.Partition.Eyebolt;
 
 /**
- * Snapshotable list with 1..n chains. 
+ * First: MultiChainList <b>!!!NOT!!!</b> implements {@link java.util.List}. 
+ * 
+ * <p>
+ * <ul>
+ * <li>modify: add elements to begin or end of list (or partition)</li>
+ * <li>read: create an immutable snapshot and iterate through elements</li>
+ * <li>optional organisation: organize  elements in multiple chains</li>
+ * <li>optional partitioning: divide list in multiple partitions</li>
+ * </ul>
+ * 
+ * <p>By default a multichainlist consists of one single partition (partition NULL). 
+ * Append or prepend an element to partition means to append or prepend this to begin or end of hole list. 
+ * Optionally a multichainlist consists of multiple partitions. 
+ * In this case append or prepend an element to partition can add the item in the middle of a list, 
+ * if selected partition is in the middle of the list. 
+ * Partitions are ordered by creation order and once created a partition can not remove anymore.
+ * 
+ * <p>By default a multichainlist consists of one single chain (chain NULL). 
+ * A chain manages the member elements and their order. 
+ * Each inserted element is containerized by one {@link Node}. 
+ * A node can link the element with various chains, but only once for a chain and with the specification of a partition. 
+ * A {@link LinkageDefinition} describes the combination of partition and chain.
+ * If an element is added to the list several times, a new node is created each time.
+ * 
+ * To modify a multichainlist prepend or append elements to one or many chains. Afterwards the membership to chains can modified with {@link Node}-object. 
+ * Removing an element from list can be reached by removing corresponding node from all chains.
+ * 
+ * Read access can only be enabled by creating a {@link Snapshot}. 
+ * Snapshots are immutable {@link Collection}s, any modifications on multichainlist after the creation of the snapshot are not visible inside.
+ * 
  * 
  * @author Sebastian Palarus
  * @since 1.0
  * @version 1.0
  * 
- * @param <E>
+ * @param <E> the type of elements in this list
  */
 public class MultiChainList<E>
 {
 	public  MultiChainList()
 	{
+		this(new String[]{null});
+	}
+	
+	public  MultiChainList(String... partitionNames)
+	{
 		super();
+		
+		if(partitionNames.length == 0)
+		{
+			partitionNames = new String[] {null};
+		}
 		this.uuid = UUID.randomUUID();
 		this.lock = new ReentrantReadWriteLock(true);
 		this.readLock = this.lock.readLock();
 		this.writeLock = this.lock.writeLock();
 		this.partitionList = new HashMap<String, Partition<E>>();
-		this.firstPartition = new Partition<E>(null,this);
-		this.lastPartition = this.firstPartition;
-		this.partitionList.put(null, this.firstPartition);
+		for(String partitionName : partitionNames)
+		{
+			if(partitionList.containsKey(partitionName))
+			{
+				continue;
+			}
+			Partition<E> partition = new Partition<E>(partitionName,this);
+			this.partitionList.put(partitionName, partition);
+			if(this.firstPartition == null)
+			{
+				this.firstPartition = partition;
+			}
+			lastPartition = partition;
+		}
 		this.modificationVersion = new SnapshotVersion<E>(this,0L);
 		this.obsoleteList = new LinkedList<Link<E>>();
 		this.openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
@@ -78,10 +129,10 @@ public class MultiChainList<E>
 	private Map<String,ChainsByPartition<E>> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition<E>>();
 	private LinkedList<ChainsByPartition<E>> _cachedChainsByPartition = new LinkedList<ChainsByPartition<E>>();
 	
-	public static final LinkageDefinition<?> DEFAULT_CHAIN_SETTING =  new LinkageDefinition<>(null, null);
+	protected volatile LinkageDefinition<?> defaultLinkageDefinition =  new LinkageDefinition<>(null, null);
 	@SuppressWarnings("unchecked")
-	public final LinkageDefinition<E>[] DEFAULT_CHAIN_SETTINGS = new LinkageDefinition[] {DEFAULT_CHAIN_SETTING};
-	public final List<LinkageDefinition<E>> DEFAULT_CHAIN_SETTING_LIST = Collections.unmodifiableList(Arrays.asList(DEFAULT_CHAIN_SETTINGS));
+	protected volatile LinkageDefinition<E>[] defaultLinkageDefinitionArray = new LinkageDefinition[] {defaultLinkageDefinition};
+	protected volatile List<LinkageDefinition<E>> defaultLinkageDefinitionList = Collections.unmodifiableList(Arrays.asList(defaultLinkageDefinitionArray));
 	
 	private UUID uuid = null;
 	
@@ -110,7 +161,37 @@ public class MultiChainList<E>
 		}
 		return modificationVersion;
 	}
+
+	@SuppressWarnings("unchecked")
+	public void setDefaultLinkageDefitinion(LinkageDefinition<E> linkageDefinition)
+	{
+		if(linkageDefinition == null)
+		{
+			throw new NullPointerException();
+		}
+		writeLock.lock();
+		try
+		{
+			this.defaultLinkageDefinition =  linkageDefinition;
+			this.defaultLinkageDefinitionArray = new LinkageDefinition[] {defaultLinkageDefinition};
+			this.defaultLinkageDefinitionList = Collections.unmodifiableList(Arrays.asList(defaultLinkageDefinitionArray));
+		}
+		finally
+		{
+			writeLock.unlock();
+		}
+	}
 	
+	public LinkageDefinition<?> getDefaultLinkageDefinition()
+	{
+		return defaultLinkageDefinition;
+	}
+
+	public List<LinkageDefinition<E>> getDefaultLinkageDefinitionList()
+	{
+		return defaultLinkageDefinitionList;
+	}
+
 	/**
 	 * Getter for node size. Node size describes the count of all {@link Node}s in List.
 	 * 
@@ -125,9 +206,15 @@ public class MultiChainList<E>
 	 * append single element
 	 */
 	
+	/**
+	 * Appends the specified element to the end of this list.  
+	 * 
+	 * @param element element to be appended to this list
+	 * @return returns the node container, which manages the element
+	 */
 	public Node<E> append(E element)
 	{
-		return append(element, DEFAULT_CHAIN_SETTING_LIST);
+		return append(element, defaultLinkageDefinitionList);
 	}
 	
 	@SafeVarargs
@@ -135,7 +222,7 @@ public class MultiChainList<E>
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return append(element, DEFAULT_CHAIN_SETTING_LIST);
+			return append(element, defaultLinkageDefinitionList);
 		}
 		return append(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
 	}
@@ -157,7 +244,7 @@ public class MultiChainList<E>
 	
 	public Node<E>[] appendAll(Collection<E> elements)
 	{
-		return appendAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+		return appendAll(elements, defaultLinkageDefinitionList);
 	}
 	
 	@SafeVarargs
@@ -165,7 +252,7 @@ public class MultiChainList<E>
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return appendAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+			return appendAll(elements, defaultLinkageDefinitionList);
 		}
 		return appendAll(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
 		
@@ -182,7 +269,7 @@ public class MultiChainList<E>
 	
 	public Node<E> prepend(E element)
 	{
-		return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
+		return prepend(element, defaultLinkageDefinitionList);
 	}
 	
 	@SafeVarargs
@@ -190,7 +277,7 @@ public class MultiChainList<E>
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return prepend(element, DEFAULT_CHAIN_SETTING_LIST);
+			return prepend(element, defaultLinkageDefinitionList);
 		}
 		return prepend(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
 	}
@@ -212,7 +299,7 @@ public class MultiChainList<E>
 	
 	public Node<E>[] prependAll(Collection<E> elements)
 	{
-		return prependAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+		return prependAll(elements, defaultLinkageDefinitionList);
 	}
 	
 	@SafeVarargs
@@ -220,7 +307,7 @@ public class MultiChainList<E>
 	{
 		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
 		{
-			return prependAll(elements, DEFAULT_CHAIN_SETTING_LIST);
+			return prependAll(elements, defaultLinkageDefinitionList);
 		}
 		return prependAll(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
 		
@@ -245,7 +332,7 @@ public class MultiChainList<E>
 		
 		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
 		{
-			linkageDefinitions = DEFAULT_CHAIN_SETTING_LIST;
+			linkageDefinitions = defaultLinkageDefinitionList;
 		}
 		
 		List<IListEventHandler<E>> eventHandlerList = this.registeredEventHandlerList;
@@ -311,7 +398,7 @@ public class MultiChainList<E>
 		
 		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
 		{
-			linkageDefinitions = DEFAULT_CHAIN_SETTING_LIST;
+			linkageDefinitions = defaultLinkageDefinitionList;
 		}
 		
 		List<IListEventHandler<E>> eventHandlerList = this.registeredEventHandlerList;
@@ -478,13 +565,7 @@ public class MultiChainList<E>
 		}
 	}
 	
-	@Deprecated
-	public Snapshot<E> createImmutableSnapshotAndClearChain(String chainName,String partitionName)
-	{
-		return createImmutableSnapshotPoll(chainName, partitionName);
-	}
-	
-	public Snapshot<E> createImmutableSnapshotPoll(String chainName,String partitionName)
+	/*public Snapshot<E> createImmutableSnapshotPoll(String chainName,String partitionName)
 	{
 		writeLock.lock();
 		try
@@ -577,9 +658,9 @@ public class MultiChainList<E>
 		{
 			writeLock.unlock();
 		}
-	}
+	}*/
 	
-	public void clear(String chainName,String partitionName)
+	/*public void clear(String chainName,String partitionName)
 	{
 		writeLock.lock();
 		try
@@ -633,7 +714,8 @@ public class MultiChainList<E>
 			{
 				try
 				{
-					createImmutableSnapshotPoll(chainName, partitionName).close();
+					chain(chainName,partition).setAnonymSnapshotChain().createImmutableSnapshotPoll();
+					//createImmutableSnapshotPoll(chainName, partitionName).close();
 				}
 				catch (Exception e) {}
 			}
@@ -642,7 +724,7 @@ public class MultiChainList<E>
 		{
 			writeLock.unlock();
 		}
-	}
+	}*/
 	
 	public void registerChainEventHandler(IChainEventHandler<E> eventHandler)
 	{
@@ -994,6 +1076,24 @@ public class MultiChainList<E>
 	}
 	
 	/**
+	 * Don't create new Threads !!!
+	 * 
+	 * @param procedure
+	 */
+	public void computeProcedure(Consumer<MultiChainList<E>> procedure)
+	{
+		writeLock.lock();
+		try
+		{
+			procedure.accept(this);
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+	}
+	
+	/**
 	 * Intern helper method. Must run in write lock and return value is processed in write lock. 
 	 * 
 	 * @param linkageDefinitions 
@@ -1184,11 +1284,13 @@ public class MultiChainList<E>
 			Eyebolt<E> eyebolt;
 			for(Partition<E> partition : getPartitionList())
 			{
-				this.clear(null,partition.name);
+				chain(null,partition).clear().dispose();
+				//this.clear(null,partition.name);
 				
 				for(String chainName : getChainNameList())
 				{
-					this.clear(chainName,partition.name);
+					chain(chainName,partition).clear().dispose();
+					//this.clear(chainName,partition.name);
 					
 					if(partition.getPartitionBegin() != null)
 					{

@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import org.sodeac.multichainlist.MultiChainList.ClearCompleteForwardChain;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
@@ -34,6 +35,7 @@ public class Chain<E>
 	private Partition<?>[] allPartitions = null;
 	private volatile Map<String,List<LinkageDefinition<E>>> definitionIndex = null;
 	private Lock definitionIndexLock = null;
+	private boolean anonymSnapshotChain = false;
 	
 	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<?>[] partitions)
 	{
@@ -43,6 +45,12 @@ public class Chain<E>
 		this.partitions = partitions;
 		this.definitionIndex = null;
 		this.definitionIndexLock = new ReentrantLock();
+	}
+	
+	protected Chain<E> setAnonymSnapshotChain()
+	{
+		this.anonymSnapshotChain = true;
+		return this;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -102,6 +110,26 @@ public class Chain<E>
 		return linkageDefinitionList;
 	}
 	
+	public int getSize()
+	{
+		multiChainList.getReadLock().lock();
+		try
+		{
+			int size = 0;
+			for(Partition<E> partition : getPartitions())
+			{
+				Eyebolt<E> beginLink =  partition.partitionBegin.getLink(chainName);
+				size += beginLink == null ? 0 : (int)beginLink.getSize();
+			}
+			
+			return size;
+		}
+		finally 
+		{
+			multiChainList.getReadLock().unlock();
+		}
+	}
+	
 	public final Node<E> append(E element)
 	{
 		return append(null,element);
@@ -143,7 +171,7 @@ public class Chain<E>
 		return this.multiChainList.prependAll(elements, getLinkageDefinition(partitionName));
 	}
 	
-	public void close()
+	public void dispose()
 	{
 		definitionIndexLock.lock();
 		try
@@ -172,7 +200,7 @@ public class Chain<E>
 		this.definitionIndexLock = null;
 	}
 	
-	public void clear()
+	public Chain<E> clear()
 	{
 		multiChainList.writeLock.lock();
 		try
@@ -231,6 +259,7 @@ public class Chain<E>
 		{
 			multiChainList.writeLock.unlock();
 		}
+		return this;
 	}
 	
 	public Snapshot<E> createImmutableSnapshot()
@@ -241,6 +270,24 @@ public class Chain<E>
 	public Snapshot<E> createImmutableSnapshotPoll()
 	{
 		return new ChainSnapshot<E>(this, true);
+	}
+	
+	/**
+	 * Don't create new Threads !!!
+	 * 
+	 * @param procedure
+	 */
+	public void computeProcedure(Consumer<Chain<E>> procedure)
+	{
+		multiChainList.writeLock.lock();
+		try
+		{
+			procedure.accept(this);
+		}
+		finally 
+		{
+			multiChainList.writeLock.unlock();
+		}
 	}
 	
 	private static class ChainSnapshot<E> extends Snapshot<E>
@@ -343,6 +390,22 @@ public class Chain<E>
 		}
 
 		@Override
+		public void close()
+		{
+			super.close();
+			if((this.chain != null) && (this.chain.anonymSnapshotChain))
+			{
+				this.chain.dispose();
+			}
+			this.chain = null;
+			if(this.partitionSnapshots != null)
+			{
+				this.partitionSnapshots.clear();
+			}
+			this.partitionSnapshots = null;
+		}
+
+		@Override
 		public Iterator<E> iterator()
 		{
 			if(closed)
@@ -373,7 +436,7 @@ public class Chain<E>
 		{
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + ((this.chain.chainName == null) ? 0 : this.chain.chainName.hashCode());
+			result = prime * result + ( this.chain == null ? 0 : ((this.chain.chainName == null) ? 0 : this.chain.chainName.hashCode()));
 			result = prime * result + ((super.uuid == null) ? 0 : super.uuid.hashCode());
 			result = prime * result + ((super.version == null) ? 0 : super.version.hashCode());
 			return result;

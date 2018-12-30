@@ -75,7 +75,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 	}
 
 	@Override
-	public void close() throws Exception
+	public void close() 
 	{
 		if(closed)
 		{

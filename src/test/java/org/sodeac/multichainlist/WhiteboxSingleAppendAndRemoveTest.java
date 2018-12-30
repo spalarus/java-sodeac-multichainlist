@@ -168,7 +168,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 		
-		Snapshot<String> snapshot1 = mcl.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = mcl.chain(null).createImmutableSnapshot();
 		iterator = snapshot1.linkIterable().iterator();
 		Link<String> link1S1 = iterator.next();
 		
@@ -222,7 +222,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 
-		Snapshot<String> snapshot2 = mcl.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = mcl.chain(null).createImmutableSnapshot();
 		iterator = snapshot2.linkIterable().iterator();
 		assertEquals("mcl should holds correct size of snapshot version", 2, mcl.openSnapshotVersionSize());
 		assertFalse("iterator 2 should has no more elements",iterator.hasNext());
@@ -396,7 +396,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 		
-		Snapshot<String> snapshot1 = mcl.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot1 = mcl.chain(null).createImmutableSnapshot();
 		iterator = snapshot1.linkIterable().iterator();
 		Link<String> link1S1 = iterator.next();
 		
@@ -451,7 +451,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 
-		Snapshot<String> snapshot2 = mcl.createImmutableSnapshot(null, null);
+		Snapshot<String> snapshot2 = mcl.chain(null).createImmutableSnapshot();
 		assertEquals("mcl should holds correct size of snapshot version", 2, mcl.openSnapshotVersionSize());
 		
 		iterator = snapshot2.linkIterable().iterator();
