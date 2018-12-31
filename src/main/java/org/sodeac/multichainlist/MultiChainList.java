@@ -56,7 +56,7 @@ import org.sodeac.multichainlist.Partition.Eyebolt;
  * If an element is added to the list several times, a new node is created each time.
  * 
  * To modify a multichainlist prepend or append elements to one or many chains. Afterwards the membership to chains can modified with {@link Node}-object. 
- * Removing an element from list can be reached by removing corresponding node from all chains.
+ * Removing an element from list can be reached by remove corresponding node from all chains.
  * 
  * Read access can only be enabled by creating a {@link Snapshot}. 
  * Snapshots are immutable {@link Collection}s, any modifications on multichainlist after the creation of the snapshot are not visible inside.

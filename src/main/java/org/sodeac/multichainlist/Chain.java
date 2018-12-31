@@ -47,6 +47,33 @@ public class Chain<E>
 		this.definitionIndexLock = new ReentrantLock();
 	}
 	
+	protected Chain(String[] partitionNames)
+	{
+		super();
+		if((partitions != null) && (partitions.length == 0))
+		{
+			partitions = null;
+		}
+		this.multiChainList = new MultiChainList<E>();
+		this.chainName = null;
+		
+		if((partitionNames == null) || (partitionNames.length == 0))
+		{
+			this.partitions = null;
+		}
+		else
+		{
+			this.partitions = new Partition<?>[partitionNames.length];
+			for(int i = 0; i < partitionNames.length; i++)
+			{
+				this.partitions[i] = this.multiChainList.definePartition(partitionNames[i]);
+			}
+		}
+		
+		this.definitionIndex = null;
+		this.definitionIndexLock = new ReentrantLock();
+	}
+	
 	protected Chain<E> setAnonymSnapshotChain()
 	{
 		this.anonymSnapshotChain = true;
@@ -68,6 +95,30 @@ public class Chain<E>
 		return (Partition<E>[])allPartitions;
 	}
 	
+	public Partition<E> getPartition(String partitionName)
+	{
+		if(partitionName == null)
+		{
+			for(Partition<E> partition : getPartitions())
+			{
+				if(partition.getName() == null)
+				{
+					return partition;
+				}
+			}
+		}
+		else
+		{
+			for(Partition<E> partition : getPartitions())
+			{
+				if(partitionName.equals(partition.getName()))
+				{
+					return partition;
+				}
+			}
+		}
+		return null;
+	}
 	private List<LinkageDefinition<E>> getLinkageDefinition(String partitionName)
 	{
 		List<LinkageDefinition<E>> linkageDefinitionList = null;
