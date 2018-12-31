@@ -702,12 +702,12 @@ public class AppendBlackboxTest
 		content1.add("5");
 		content1.add("6");
 		
-		multiChainList.definePartition("P");
+		Partition<String> partitionP = multiChainList.definePartition("P");
 		
-		chain.appendAll( "P", content1);
+		chain.prependAll(partitionP, content1);
 		
 		assertEquals("size should be correct", 6, multiChainList.getNodeSize());
 		assertEquals("size should be correct", 3, multiChainList.getPartition(null).getSize(null));
-		assertEquals("size should be correct", 3, multiChainList.getPartition("P").getSize(null));
+		assertEquals("size should be correct", 3, partitionP.getSize(null));
 	}
 }

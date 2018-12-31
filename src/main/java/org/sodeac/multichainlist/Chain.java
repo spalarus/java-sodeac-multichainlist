@@ -119,8 +119,9 @@ public class Chain<E>
 		}
 		return null;
 	}
-	private List<LinkageDefinition<E>> getLinkageDefinition(String partitionName)
+	private List<LinkageDefinition<E>> getLinkageDefinition(Partition<E> partition)
 	{
+		String partitionName = partition == null ? null : partition.getName();
 		List<LinkageDefinition<E>> linkageDefinitionList = null;
 		Map<String,List<LinkageDefinition<E>>> index = this.definitionIndex;
 		if(index != null)
@@ -186,40 +187,40 @@ public class Chain<E>
 		return append(null,element);
 	}
 	
-	public final Node<E> append(String partitionName, E element)
+	public final Node<E> append(Partition<E> partition, E element)
 	{
-		return this.multiChainList.append(element, getLinkageDefinition(partitionName));
+		return this.multiChainList.append(element, getLinkageDefinition(partition));
 	}
 	
 	@SafeVarargs
-	public final Node<E>[] appendAll(String partitionName, E... elements)
+	public final Node<E>[] appendAll(Partition<E> partition, E... elements)
 	{
-		return this.multiChainList.appendAll(Arrays.<E>asList(elements), getLinkageDefinition(partitionName));
+		return this.multiChainList.appendAll(Arrays.<E>asList(elements), getLinkageDefinition(partition));
 	}
 	
-	public Node<E>[] appendAll(String partitionName, Collection<E> elements)
+	public Node<E>[] appendAll(Partition<E> partition, Collection<E> elements)
 	{
-		return this.multiChainList.appendAll(elements, getLinkageDefinition(partitionName));
+		return this.multiChainList.appendAll(elements, getLinkageDefinition(partition));
 	}
 	
 	public final Node<E> prepend(E element)
 	{
 		return this.prepend(null, element);
 	}
-	public final Node<E> prepend(String partitionName, E element)
+	public final Node<E> prepend(Partition<E> partition, E element)
 	{
-		return this.multiChainList.prepend(element, getLinkageDefinition(partitionName));
+		return this.multiChainList.prepend(element, getLinkageDefinition(partition));
 	}
 	
 	@SafeVarargs
-	public final Node<E>[] prependAll(String partitionName, E... elements)
+	public final Node<E>[] prependAll(Partition<E> partition, E... elements)
 	{
-		return this.multiChainList.prependAll(Arrays.<E>asList(elements), getLinkageDefinition(partitionName));
+		return this.multiChainList.prependAll(Arrays.<E>asList(elements), getLinkageDefinition(partition));
 	}
 	
-	public Node<E>[] prependAll(String partitionName, Collection<E> elements)
+	public Node<E>[] prependAll(Partition<E> partition, Collection<E> elements)
 	{
-		return this.multiChainList.prependAll(elements, getLinkageDefinition(partitionName));
+		return this.multiChainList.prependAll(elements, getLinkageDefinition(partition));
 	}
 	
 	public void dispose()
