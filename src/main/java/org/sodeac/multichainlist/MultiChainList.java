@@ -129,7 +129,7 @@ public class MultiChainList<E>
 	private Map<String,ChainsByPartition<E>> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition<E>>();
 	private LinkedList<ChainsByPartition<E>> _cachedChainsByPartition = new LinkedList<ChainsByPartition<E>>();
 	
-	protected volatile LinkageDefinition<?> defaultLinkageDefinition =  new LinkageDefinition<>(null, null);
+	protected volatile LinkageDefinition<E> defaultLinkageDefinition =  new LinkageDefinition<>(null, null);
 	@SuppressWarnings("unchecked")
 	protected volatile LinkageDefinition<E>[] defaultLinkageDefinitionArray = new LinkageDefinition[] {defaultLinkageDefinition};
 	protected volatile List<LinkageDefinition<E>> defaultLinkageDefinitionList = Collections.unmodifiableList(Arrays.asList(defaultLinkageDefinitionArray));
@@ -182,7 +182,7 @@ public class MultiChainList<E>
 		}
 	}
 	
-	public LinkageDefinition<?> getDefaultLinkageDefinition()
+	public LinkageDefinition<E> getDefaultLinkageDefinition()
 	{
 		return defaultLinkageDefinition;
 	}
@@ -835,7 +835,7 @@ public class MultiChainList<E>
 	 */
 	public Chain<E> chain( String chainName)
 	{
-		return new Chain<E>(this, chainName, null);
+		return new Chain<E>(this, chainName, null,this.getDefaultLinkageDefinition().getPartition());
 	}
 	
 	/**
@@ -845,9 +845,17 @@ public class MultiChainList<E>
 	 * @param partitions
 	 * @return
 	 */
-	public Chain<E> chain( String chainName, Partition<?>... partitions)
+	public Chain<E> chain( String chainName, Partition<E>... partitions)
 	{
-		return new Chain<E>(this, chainName, partitions);
+		if(partitions == null)
+		{
+			throw new NullPointerException();
+		}
+		if(partitions.length == 0)
+		{
+			throw new IllegalArgumentException("Partitions length == 0");
+		}
+		return new Chain<E>(this, chainName, partitions, partitions[0]);
 	}
 	
 	/*

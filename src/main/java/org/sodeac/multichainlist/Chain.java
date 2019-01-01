@@ -31,13 +31,14 @@ public class Chain<E>
 {
 	private MultiChainList<E> multiChainList = null;
 	private String chainName = null;
-	private Partition<?>[] partitions = null;
-	private Partition<?>[] allPartitions = null;
+	private Partition<E>[] partitions = null;
+	private Partition<E>[] allPartitions = null;
 	private volatile Map<String,List<LinkageDefinition<E>>> definitionIndex = null;
 	private Lock definitionIndexLock = null;
 	private boolean anonymSnapshotChain = false;
+	private Partition<E> defaultPartition = null;
 	
-	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<?>[] partitions)
+	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<E>[] partitions,Partition<E> defaultPartition)
 	{
 		super();
 		this.multiChainList = multiChainList;
@@ -45,8 +46,10 @@ public class Chain<E>
 		this.partitions = partitions;
 		this.definitionIndex = null;
 		this.definitionIndexLock = new ReentrantLock();
+		this.defaultPartition = defaultPartition;
 	}
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	protected Chain(String[] partitionNames)
 	{
 		super();
@@ -60,18 +63,27 @@ public class Chain<E>
 		if((partitionNames == null) || (partitionNames.length == 0))
 		{
 			this.partitions = null;
+			this.defaultPartition = multiChainList.getDefaultLinkageDefinition().getPartition();
 		}
 		else
 		{
-			this.partitions = new Partition<?>[partitionNames.length];
+			this.partitions = new Partition[partitionNames.length];
 			for(int i = 0; i < partitionNames.length; i++)
 			{
 				this.partitions[i] = this.multiChainList.definePartition(partitionNames[i]);
 			}
+			this.multiChainList.setDefaultLinkageDefitinion(new LinkageDefinition(null, this.partitions[0]));
+			this.defaultPartition = multiChainList.getDefaultLinkageDefinition().getPartition();
 		}
 		
 		this.definitionIndex = null;
 		this.definitionIndexLock = new ReentrantLock();
+	}
+	
+	public Chain<E> setDefaultPartion(Partition<E> defautlPartition)
+	{
+		this.defaultPartition = defautlPartition;
+		return this;
 	}
 	
 	protected Chain<E> setAnonymSnapshotChain()
@@ -121,6 +133,10 @@ public class Chain<E>
 	}
 	private List<LinkageDefinition<E>> getLinkageDefinition(Partition<E> partition)
 	{
+		if(partition == null)
+		{
+			partition = defaultPartition;
+		}	
 		String partitionName = partition == null ? null : partition.getName();
 		List<LinkageDefinition<E>> linkageDefinitionList = null;
 		Map<String,List<LinkageDefinition<E>>> index = this.definitionIndex;
