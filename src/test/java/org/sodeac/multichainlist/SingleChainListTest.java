@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
@@ -13,7 +23,7 @@ public class SingleChainListTest
 	public void test00001WithoutPartition() throws Exception
 	{
 		SingleChainList<String> list = new SingleChainList<>();
-		list.appendAll(null,"1","2","3","4","5");
+		list.defaultLinker().appendAll("1","2","3","4","5");
 		
 		assertEquals("list size should be correct", 5, list.getSize());
 		Snapshot<String> s = list.createImmutableSnapshot();
@@ -29,9 +39,9 @@ public class SingleChainListTest
 	public void test00002WithPartition() throws Exception
 	{
 		SingleChainList<String> list = new SingleChainList<>("first","second","third");
-		list.appendAll(list.getPartition("third"),"4","5");
-		list.appendAll(list.getPartition("first"),"1","2");
-		list.append(list.getPartition("second"), "3");
+		list.linkerForPartition("third").appendAll("4","5");
+		list.linkerForPartition("first").appendAll("1","2");
+		list.linkerForPartition("second").append("3");
 		
 		assertEquals("list size should be correct", 5, list.getSize());
 		Snapshot<String> s = list.createImmutableSnapshot();

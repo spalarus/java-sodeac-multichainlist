@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Sebastian Palarus
+ * Copyright (c) 2018, 2019 Sebastian Palarus
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v2.0
  * which accompanies this distribution, and is available at
@@ -20,6 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -106,6 +107,7 @@ public class MultiChainList<E>
 		this.obsoleteList = new LinkedList<Link<E>>();
 		this.openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
 		this.nodeSize = 0L;
+		this.defaultLinker = LinkerBuilder.newBuilder().inPartition(this.lastPartition.getName()).linkIntoChain(null).buildLinker(this);
 	}
 	
 	protected ReentrantReadWriteLock lock;
@@ -126,13 +128,9 @@ public class MultiChainList<E>
 	protected volatile LinkedList<IListEventHandler<E>> registeredEventHandlerList = null;
 	protected volatile long nodeSize;
 	
-	private Map<String,ChainsByPartition<E>> _cachedRefactoredLinkageDefinition = new HashMap<String,ChainsByPartition<E>>();
-	private LinkedList<ChainsByPartition<E>> _cachedChainsByPartition = new LinkedList<ChainsByPartition<E>>();
-	
-	protected volatile LinkageDefinition<E> defaultLinkageDefinition =  new LinkageDefinition<>(null, null);
-	@SuppressWarnings("unchecked")
-	protected volatile LinkageDefinition<E>[] defaultLinkageDefinitionArray = new LinkageDefinition[] {defaultLinkageDefinition};
-	protected volatile List<LinkageDefinition<E>> defaultLinkageDefinitionList = Collections.unmodifiableList(Arrays.asList(defaultLinkageDefinitionArray));
+	protected volatile boolean lockDefaultLinker = false;
+	protected volatile Linker<E> defaultLinker =  null;
+	protected Map<String,Map<String,Chain<E>>> cachedChains = null;
 	
 	private UUID uuid = null;
 	
@@ -162,34 +160,24 @@ public class MultiChainList<E>
 		return modificationVersion;
 	}
 
-	@SuppressWarnings("unchecked")
-	public void setDefaultLinkageDefitinion(LinkageDefinition<E> linkageDefinition)
+	public Linker<E> defaultLinker()
 	{
-		if(linkageDefinition == null)
-		{
-			throw new NullPointerException();
-		}
-		writeLock.lock();
-		try
-		{
-			this.defaultLinkageDefinition =  linkageDefinition;
-			this.defaultLinkageDefinitionArray = new LinkageDefinition[] {defaultLinkageDefinition};
-			this.defaultLinkageDefinitionList = Collections.unmodifiableList(Arrays.asList(defaultLinkageDefinitionArray));
-		}
-		finally
-		{
-			writeLock.unlock();
-		}
-	}
-	
-	public LinkageDefinition<E> getDefaultLinkageDefinition()
-	{
-		return defaultLinkageDefinition;
+		return defaultLinker;
 	}
 
-	public List<LinkageDefinition<E>> getDefaultLinkageDefinitionList()
+	public void buildDefaultLinker(LinkerBuilder linkerBuilder)
 	{
-		return defaultLinkageDefinitionList;
+		if(lockDefaultLinker)
+		{
+			throw new RuntimeException("default linker is locked");
+		}
+		this.defaultLinker = linkerBuilder.buildLinker(this);
+	}
+	
+	public MultiChainList<E> lockDefaultLinker()
+	{
+		this.lockDefaultLinker = true;
+		return this;
 	}
 
 	/**
@@ -200,256 +188,6 @@ public class MultiChainList<E>
 	public long getNodeSize()
 	{
 		return nodeSize;
-	}
-	
-	/*
-	 * append single element
-	 */
-	
-	/**
-	 * Appends the specified element to the end of this list.  
-	 * 
-	 * @param element element to be appended to this list
-	 * @return returns the node container, which manages the element
-	 */
-	public Node<E> append(E element)
-	{
-		return append(element, defaultLinkageDefinitionList);
-	}
-	
-	@SafeVarargs
-	public final Node<E> append(E element, LinkageDefinition<E>... linkageDefinitions)
-	{
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
-		{
-			return append(element, defaultLinkageDefinitionList);
-		}
-		return append(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
-	}
-	
-	public Node<E> append(E element, List<LinkageDefinition<E>> linkageDefinitions)
-	{
-		return add(element, linkageDefinitions, Partition.LinkMode.APPEND);
-	}
-	
-	/*
-	 * append element list
-	 */
-
-	@SafeVarargs
-	public final Node<E>[] appendAll(E... elements)
-	{
-		return appendAll(Arrays.<E>asList(elements));
-	}
-	
-	public Node<E>[] appendAll(Collection<E> elements)
-	{
-		return appendAll(elements, defaultLinkageDefinitionList);
-	}
-	
-	@SafeVarargs
-	public final Node<E>[] appendAll(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
-	{
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
-		{
-			return appendAll(elements, defaultLinkageDefinitionList);
-		}
-		return appendAll(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
-		
-	}
-	
-	public Node<E>[] appendAll(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
-	{
-		return add(elements, linkageDefinitions, Partition.LinkMode.APPEND);
-	}
-	
-	/*
-	 * prepend single element
-	 */
-	
-	public Node<E> prepend(E element)
-	{
-		return prepend(element, defaultLinkageDefinitionList);
-	}
-	
-	@SafeVarargs
-	public final Node<E> prepend(E element, LinkageDefinition<E>... linkageDefinitions)
-	{
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
-		{
-			return prepend(element, defaultLinkageDefinitionList);
-		}
-		return prepend(element, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
-	}
-	
-	public Node<E> prepend(E element, List<LinkageDefinition<E>> linkageDefinitions)
-	{
-		return add(element, linkageDefinitions, Partition.LinkMode.PREPEND);
-	}
-	
-	/*
-	 * prepend element list
-	 */
-	
-	@SafeVarargs
-	public final Node<E>[] prependAll(E... elements)
-	{
-		return prependAll(Arrays.<E>asList(elements));
-	}
-	
-	public Node<E>[] prependAll(Collection<E> elements)
-	{
-		return prependAll(elements, defaultLinkageDefinitionList);
-	}
-	
-	@SafeVarargs
-	public final Node<E>[] prependAll(Collection<E> elements, LinkageDefinition<E>... linkageDefinitions)
-	{
-		if((linkageDefinitions == null) || (linkageDefinitions.length == 0))
-		{
-			return prependAll(elements, defaultLinkageDefinitionList);
-		}
-		return prependAll(elements, Arrays.<LinkageDefinition<E>>asList(linkageDefinitions));
-		
-	}
-	
-	public Node<E>[] prependAll(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions)
-	{
-		return add(elements, linkageDefinitions, Partition.LinkMode.PREPEND);
-	}
-	
-	// intern method append/prepend
-	
-	@SuppressWarnings("unchecked")
-	private Node<E>[] add(Collection<E> elements, List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
-	{
-		if(elements == null)
-		{
-			return null;
-		}
-		
-		Node<E>[] nodes = new Node[elements.size()];
-		
-		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
-		{
-			linkageDefinitions = defaultLinkageDefinitionList;
-		}
-		
-		List<IListEventHandler<E>> eventHandlerList = this.registeredEventHandlerList;
-		if((eventHandlerList != null) && (!eventHandlerList.isEmpty()))
-		{
-			for(IListEventHandler<E> eventHandler : eventHandlerList)
-			{
-				try
-				{
-					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onCreateNodeList(elements, linkageDefinitions, linkMode);
-					if(newLinkageDefinitions != null)
-					{
-						linkageDefinitions = newLinkageDefinitions;
-					}
-				}
-				catch (Exception e) {}
-				catch (Error e) {}
-			}
-		}
-		
-		if(linkageDefinitions.isEmpty())
-		{
-			return null;
-		}
-		
-		writeLock.lock();
-		try
-		{
-			Node<E> node = null;
-			getModificationVersion();
-			
-			Map<String,ChainsByPartition<E>> chainsGroupedByPartition = refactorLinkageDefintions(linkageDefinitions);
-			
-			int index = 0;
-			for(E element : elements)
-			{
-				node = new Node<E>(element,this);
-				nodes[index++] = node;
-				for(ChainsByPartition<E> chainsByPartition : chainsGroupedByPartition.values())
-				{
-					if(linkMode == Partition.LinkMode.PREPEND)
-					{
-						chainsByPartition.partition.prependNode(node, chainsByPartition.chains.values(), modificationVersion);
-					}
-					else
-					{
-						chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
-					}
-				}
-			}
-		}
-		finally 
-		{
-			clearRefactorLinkageDefinition();
-			writeLock.unlock();
-		}
-		return nodes;
-	}
-	
-	private Node<E> add(E element, List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
-	{
-		Node<E> node = null;
-		
-		if((linkageDefinitions == null) || (linkageDefinitions.size() == 0))
-		{
-			linkageDefinitions = defaultLinkageDefinitionList;
-		}
-		
-		List<IListEventHandler<E>> eventHandlerList = this.registeredEventHandlerList;
-		if((eventHandlerList != null) && (!eventHandlerList.isEmpty()))
-		{
-			for(IListEventHandler<E> eventHandler : eventHandlerList)
-			{
-				try
-				{
-					List<LinkageDefinition<E>> newLinkageDefinitions = eventHandler.onCreateNode(element, linkageDefinitions, linkMode);
-					if(newLinkageDefinitions != null)
-					{
-						linkageDefinitions = newLinkageDefinitions;
-					}
-				}
-				catch (Exception e) {}
-				catch (Error e) {}
-			}
-		}
-		
-		if(linkageDefinitions.isEmpty())
-		{
-			return null;
-		}
-		
-		writeLock.lock();
-		try
-		{
-			getModificationVersion();
-			
-			Map<String,ChainsByPartition<E>> chainsGroupedByPartition = refactorLinkageDefintions(linkageDefinitions);
-			
-			node = new Node<E>(element,this);
-			for(ChainsByPartition<E> chainsByPartition : chainsGroupedByPartition.values())
-			{
-				if(linkMode == Partition.LinkMode.PREPEND)
-				{
-					chainsByPartition.partition.prependNode(node, chainsByPartition.chains.values(), modificationVersion);
-				}
-				else
-				{
-					chainsByPartition.partition.appendNode(node, chainsByPartition.chains.values(), modificationVersion);
-				}
-			}
-		}
-		finally 
-		{
-			clearRefactorLinkageDefinition();
-			writeLock.unlock();
-		}
-		return node;
 	}
 	
 	public int getPartitionSize()
@@ -565,167 +303,6 @@ public class MultiChainList<E>
 		}
 	}
 	
-	/*public Snapshot<E> createImmutableSnapshotPoll(String chainName,String partitionName)
-	{
-		writeLock.lock();
-		try
-		{
-			Partition<E> partition = this.partitionList.get(partitionName);
-			if(partition == null)
-			{
-				throw new RuntimeException("partition " + partitionName + " not found");
-			}
-			if(this.snapshotVersion == null)
-			{
-				this.snapshotVersion = this.modificationVersion;
-				this.openSnapshotVersionList.add(this.snapshotVersion);
-			}
-			
-			chainNameListCopy = null;
-					
-			Snapshot<E> snapshot = new Snapshot<>(this.snapshotVersion, chainName, partition, this);
-			this.snapshotVersion.addSnapshot(snapshot);
-			
-			Eyebolt<E> beginLink = partition.getPartitionBegin().getLink(chainName);
-			if(beginLink == null)
-			{
-				return snapshot;
-			}
-			if(beginLink.getSize() == 0)
-			{
-				return snapshot;
-			}
-			getModificationVersion();
-			Eyebolt<E> endLink = partition.getPartitionEnd().getLink(chainName);
-			beginLink = beginLink.createNewerLink(modificationVersion, null);
-			endLink.previewsLink = beginLink;
-			beginLink.nextLink = endLink;
-			beginLink.setSize(0);
-			endLink.setSize(0);
-			
-			
-			if(beginLink.olderVersion.nextLink != null)
-			{
-				setObsolete(new ClearCompleteForwardChain<E>(beginLink.olderVersion.nextLink));
-				
-				Link<E> clearLink = beginLink.olderVersion.nextLink;
-				Link<E> nextLink;
-				while(clearLink != null)
-				{
-					nextLink = clearLink.nextLink;
-					
-					if(clearLink.node != null)
-					{
-						if(!clearLink.node.isPayload())
-						{
-							break;
-						}
-						
-						clearLink.node.setHead(chainName, null, null);
-					}
-					
-					clearLink = nextLink;
-				}
-			}
-			
-			beginLink.olderVersion.clear();
-					
-			return snapshot;
-		}
-		finally 
-		{
-			writeLock.unlock();
-		}
-	}
-	public Snapshot<E> createImmutableSnapshot(String chainName,String partitionName)
-	{
-		writeLock.lock();
-		try
-		{
-			Partition<E> partition = this.partitionList.get(partitionName);
-			if(partition == null)
-			{
-				throw new RuntimeException("partition " + partitionName + " not found");
-			}
-			if(this.snapshotVersion == null)
-			{
-				this.snapshotVersion = this.modificationVersion;
-				this.openSnapshotVersionList.add(this.snapshotVersion);
-			}
-			return partition.createSnapshot(chainName, this.snapshotVersion);
-		}
-		finally 
-		{
-			writeLock.unlock();
-		}
-	}*/
-	
-	/*public void clear(String chainName,String partitionName)
-	{
-		writeLock.lock();
-		try
-		{
-			Partition<E> partition = this.partitionList.get(partitionName);
-			if(partition == null)
-			{
-				throw new RuntimeException("partition " + partitionName + " not found");
-			}
-			
-			Eyebolt<E> beginLink = partition.getPartitionBegin().getLink(chainName);
-			if(beginLink == null)
-			{
-				return;
-			}
-			if(beginLink.getSize() == 0)
-			{
-				return;
-			}
-			
-			chainNameListCopy = null;
-			
-			if(openSnapshotVersionList.isEmpty())
-			{
-				Eyebolt<E> endLink = partition.getPartitionEnd().getLink(chainName);
-				Link<E> clearLink = beginLink.nextLink;
-				endLink.previewsLink = beginLink;
-				beginLink.nextLink = endLink;
-				beginLink.setSize(0);
-				endLink.setSize(0);
-				
-				Link<E> nextLink;
-				while(clearLink != null)
-				{
-					if((clearLink.node != null) && (!clearLink.node.isPayload()))
-					{
-						break;
-					}
-					nextLink = clearLink.nextLink;
-					
-					if(clearLink.node != null)
-					{
-						clearLink.node.setHead(chainName, null, null);
-					}
-					clearLink.clear();
-					
-					clearLink = nextLink;
-				}
-			}
-			else
-			{
-				try
-				{
-					chain(chainName,partition).setAnonymSnapshotChain().createImmutableSnapshotPoll();
-					//createImmutableSnapshotPoll(chainName, partitionName).close();
-				}
-				catch (Exception e) {}
-			}
-		}
-		finally 
-		{
-			writeLock.unlock();
-		}
-	}*/
-	
 	public void registerChainEventHandler(IChainEventHandler<E> eventHandler)
 	{
 		if(eventHandler == null)
@@ -835,7 +412,7 @@ public class MultiChainList<E>
 	 */
 	public Chain<E> chain( String chainName)
 	{
-		return new Chain<E>(this, chainName, null,this.getDefaultLinkageDefinition().getPartition());
+		return new Chain<E>(this, chainName, null);
 	}
 	
 	/**
@@ -845,17 +422,62 @@ public class MultiChainList<E>
 	 * @param partitions
 	 * @return
 	 */
-	public Chain<E> chain( String chainName, Partition<E>... partitions)
+	@SafeVarargs
+	public final Chain<E> chain( String chainName, Partition<E>... partitions)
 	{
-		if(partitions == null)
-		{
-			throw new NullPointerException();
-		}
+		Objects.requireNonNull(partitions);
 		if(partitions.length == 0)
 		{
 			throw new IllegalArgumentException("Partitions length == 0");
 		}
-		return new Chain<E>(this, chainName, partitions, partitions[0]);
+		return new Chain<E>(this, chainName, partitions);
+	}
+	
+	public Chain<E> cachedChain(String chainName, String defaultPartitionName)
+	{
+		readLock.lock();
+		try
+		{
+			if((this.cachedChains != null) && (this.cachedChains.containsKey(chainName)))
+			{
+				Map<String,Chain<E>> cachedChainsCluster = this.cachedChains.get(chainName);
+				if((cachedChainsCluster != null) && (cachedChainsCluster.containsKey(defaultPartitionName)))
+				{
+					return cachedChainsCluster.get(defaultPartitionName);
+				}
+			}
+		}
+		finally 
+		{
+			readLock.unlock();
+		}
+		
+		writeLock.lock();
+		try
+		{
+			if(this.cachedChains == null)
+			{
+				this.cachedChains = new HashMap<String,Map<String,Chain<E>>>();
+			}
+			
+			Map<String,Chain<E>> cachedChainsCluster = this.cachedChains.get(chainName);
+			if(cachedChainsCluster == null)
+			{
+				cachedChainsCluster = new HashMap<String,Chain<E>>();
+				this.cachedChains.put(chainName,cachedChainsCluster);
+			}
+			Chain<E> cachedChain = cachedChainsCluster.get(defaultPartitionName);
+			if(cachedChain == null)
+			{
+				cachedChain = this.chain(chainName).buildDefaultLinker(defaultPartitionName).lockDefaultLinker().setLockDispose(true);
+				cachedChainsCluster.put(defaultPartitionName,cachedChain);
+			}
+			return cachedChain;
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
 	}
 	
 	/*
@@ -1050,25 +672,7 @@ public class MultiChainList<E>
 			writeLock.unlock();
 		}
 	}
-	
-	/*
-	 * Must run in write lock !!!!
-	 */
-	protected void clearRefactorLinkageDefinition()
-	{
-		try
-		{
-			for(ChainsByPartition<E> chainsByPartition : _cachedRefactoredLinkageDefinition.values())
-			{
-				chainsByPartition.chains.clear();
-				_cachedChainsByPartition.add(chainsByPartition);
-			}
-		}
-		catch (Exception e) {}
-		
-		try {_cachedRefactoredLinkageDefinition.clear();} catch (Exception e) {}
-	}
-	
+
 	/*
 	 * Must run in write lock !!!!
 	 */
@@ -1101,53 +705,6 @@ public class MultiChainList<E>
 		}
 	}
 	
-	/**
-	 * Intern helper method. Must run in write lock and return value is processed in write lock. 
-	 * 
-	 * @param linkageDefinitions 
-	 * 
-	 * @return all nodes grouped by partition
-	 */
-	protected Map<String,ChainsByPartition<E>> refactorLinkageDefintions(Collection<LinkageDefinition<E>> linkageDefinitions)
-	{
-		_cachedRefactoredLinkageDefinition.clear();
-		
-		Partition<E> partition;
-		ChainsByPartition<E> chainsByPartition = null;
-		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
-		{
-			partition = linkageDefinition.getPartition();
-			if(partition == null)
-			{
-				partition = this.partitionList.get(null);
-			}
-			if(partition.multiChainList != this)
-			{
-				throw new RuntimeException("partition is no member of multichainlist");
-			}
-			chainsByPartition = _cachedRefactoredLinkageDefinition.get(partition.getName());
-			if(chainsByPartition == null)
-			{
-				if(_cachedChainsByPartition.isEmpty())
-				{
-					chainsByPartition = new ChainsByPartition<E>();
-				}
-				else
-				{
-					chainsByPartition = _cachedChainsByPartition.removeFirst();
-					chainsByPartition.chains.clear();
-				}
-				chainsByPartition.partition = partition;
-				
-				_cachedRefactoredLinkageDefinition.put(partition.getName(), chainsByPartition);
-			}
-			chainsByPartition.chains.put(linkageDefinition.getChainName(),linkageDefinition);
-		}
-		chainsByPartition = null;
-		partition = null;
-		return _cachedRefactoredLinkageDefinition;
-	}
-
 	@Override
 	public int hashCode()
 	{
@@ -1218,15 +775,6 @@ public class MultiChainList<E>
 			return Long.compare(this.sequence, o.sequence);
 		}
 		
-		/*protected void addModifiedLink(ChainEndpointLink<E> beginLinkage)
-		{
-			if(this.modifiedBeginLinkages == null)
-			{
-				this.modifiedBeginLinkages = new HashSet<ChainEndpointLink<E>>();
-			}
-			this.modifiedBeginLinkages.add(beginLinkage);
-		}*/
-
 		@Override
 		public int hashCode()
 		{
@@ -1400,44 +948,33 @@ public class MultiChainList<E>
 				registeredEventHandlerList = null;
 			}
 			
-			if(_cachedRefactoredLinkageDefinition != null)
+			if(cachedChains != null)
 			{
-				for(ChainsByPartition<E> chainsByPartition : _cachedRefactoredLinkageDefinition.values())
+				for(Map<String,Chain<E>> cachedChainCluster : cachedChains.values())
 				{
 					try
 					{
-						if(chainsByPartition.chains != null)
+						for(Chain<E> cachedChain : cachedChainCluster.values())
 						{
-							chainsByPartition.chains.clear();
-							chainsByPartition.chains = null;
+							try
+							{
+								cachedChain.setLockDispose(false);
+								cachedChain.dispose();
+							}
+							catch (Exception e) {}
 						}
-						chainsByPartition.partition = null;
+						cachedChainCluster.clear();
 					}
 					catch (Exception e) {}
 				}
-				try{_cachedRefactoredLinkageDefinition.clear();}catch (Exception e) {}
-				_cachedRefactoredLinkageDefinition = null;
-			}
-			
-			if(_cachedChainsByPartition != null)
-			{
-				for(ChainsByPartition<E> chainsByPartition : _cachedChainsByPartition)
+				try
 				{
-					try
-					{
-						if(chainsByPartition.chains != null)
-						{
-							chainsByPartition.chains.clear();
-							chainsByPartition.chains = null;
-						}
-						chainsByPartition.partition = null;
-					}
-					catch (Exception e) {}
+					cachedChains.clear();
 				}
-				try{_cachedChainsByPartition.clear();}catch (Exception e) {}
-				_cachedChainsByPartition = null;
+				catch (Exception e) {}
+				cachedChains = null;
 			}
-			
+
 			uuid = null;
 			
 		}

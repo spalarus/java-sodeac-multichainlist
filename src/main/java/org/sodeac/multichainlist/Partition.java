@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Sebastian Palarus
+ * Copyright (c) 2018, 2019 Sebastian Palarus
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v2.0
  * which accompanies this distribution, and is available at
@@ -67,150 +67,149 @@ public class Partition<E>
 	{
 		return partitionEnd;
 	}
-
+	
 	protected void appendNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
 	{
-		Eyebolt<E> linkBegin;
-		Eyebolt<E> linkEnd;
-		Link<E> link;
-		LinkageDefinition<E> privateLinkageDefinition;
-		
 		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
 		{
-			privateLinkageDefinition = privateLinkageDefinitions.get(linkageDefinition.getChainName());
-			if(privateLinkageDefinition == null)
-			{
-				privateLinkageDefinition = new LinkageDefinition<>(linkageDefinition.getChainName(), this);
-				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
-			}
-			linkageDefinition = privateLinkageDefinition;
-			link = node.getLink(linkageDefinition.getChainName());
-			if(link != null)
-			{
-				throw new ChainConflictException(linkageDefinition.getChainName(),node);
-			}
-			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
-			if(linkBegin == null)
-			{
-				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion, null);
-			}
-			linkEnd = partitionEnd.getLink(linkageDefinition.getChainName());
-			if(linkEnd == null)
-			{
-				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion, null);
-			}
-			if(linkBegin.nextLink == null)
-			{
-				linkBegin.nextLink = linkEnd;
-			}
-			if(linkEnd.previewsLink == null)
-			{
-				linkEnd.previewsLink = linkBegin;
-			}
-			
-			Link<E> prev = linkEnd.previewsLink;
-			
-			link = node.createHead(linkageDefinition, currentVersion, LinkMode.APPEND);
+			appendNode(node, linkageDefinition.getChainName(), currentVersion);
+		}
+	}
 
+	protected void appendNode(Node<E> node, String chainName, SnapshotVersion<E> currentVersion)
+	{
+		LinkageDefinition<E> privateLinkageDefinition = privateLinkageDefinitions.get(chainName);
+		
+		if(privateLinkageDefinition == null)
+		{
+			privateLinkageDefinition = new LinkageDefinition<>(chainName, this);
+			privateLinkageDefinitions.put(chainName, privateLinkageDefinition);
+		}
+		Link<E> link = node.getLink(chainName);
+		if(link != null)
+		{
+			throw new ChainConflictException(chainName,node);
+		}
+		Eyebolt<E> linkBegin = partitionBegin.getLink(chainName);
+		if(linkBegin == null)
+		{
+			linkBegin = partitionBegin.createHead(privateLinkageDefinition, currentVersion, null);
+		}
+		Eyebolt<E>  linkEnd = partitionEnd.getLink(privateLinkageDefinition.getChainName());
+		if(linkEnd == null)
+		{
+			linkEnd = partitionEnd.createHead(privateLinkageDefinition, currentVersion, null);
+		}
+		if(linkBegin.nextLink == null)
+		{
+			linkBegin.nextLink = linkEnd;
+		}
+		if(linkEnd.previewsLink == null)
+		{
+			linkEnd.previewsLink = linkBegin;
+		}
+		
+		Link<E> prev = linkEnd.previewsLink;
+		
+		link = node.createHead(privateLinkageDefinition, currentVersion, LinkMode.APPEND);
 			Link<E> previewsOfPreviews = null;
-			if((prev.createOnVersion != currentVersion) && (prev != linkBegin))
+		if((prev.createOnVersion != currentVersion) && (prev != linkBegin))
+		{
+			// if prev == linkBegin => chainBegin does not require new link-begin-version, 
+			// because snapshots links first payload link and current version has nothing to clean on snapshot.close()
+			
+			if(prev.createOnVersion.getSequence() < currentVersion.getSequence())
 			{
-				// if prev == linkBegin => chainBegin does not require new link-begin-version, 
-				// because snapshots links first payload link and current version has nothing to clean on snapshot.close()
-				
-				if(prev.createOnVersion.getSequence() < currentVersion.getSequence())
+				if(! multiChainList.openSnapshotVersionList.isEmpty())
 				{
-					if(! multiChainList.openSnapshotVersionList.isEmpty())
-					{
-						previewsOfPreviews = prev.previewsLink;
-						prev = prev.createNewerLink(currentVersion, null);
-						prev.previewsLink = previewsOfPreviews;
-					}
+					previewsOfPreviews = prev.previewsLink;
+					prev = prev.createNewerLink(currentVersion, null);
+					prev.previewsLink = previewsOfPreviews;
 				}
 			}
-			
-			// link new link with endlink
-			linkEnd.previewsLink = link;
-			link.nextLink = linkEnd;
-			
-			// link new link with previews link
-			link.previewsLink = prev;
-			
-			// set new route
-			prev.nextLink = link;
-			
-			if(previewsOfPreviews != null)
-			{
-				// set new route, if previews creates a new version
-				previewsOfPreviews.nextLink = prev;
-			}
-			
-			linkBegin.incrementSize();
-			linkEnd.incrementSize();
 		}
+		
+		// link new link with endlink
+		linkEnd.previewsLink = link;
+		link.nextLink = linkEnd;
+		
+		// link new link with previews link
+		link.previewsLink = prev;
+		
+		// set new route
+		prev.nextLink = link;
+		
+		if(previewsOfPreviews != null)
+		{
+			// set new route, if previews creates a new version
+			previewsOfPreviews.nextLink = prev;
+		}
+		
+		linkBegin.incrementSize();
+		linkEnd.incrementSize();
 	}
 	
 	protected void prependNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
 	{
-		Eyebolt<E> linkBegin;
-		Eyebolt<E> linkEnd;
-		Link<E> link;
-		LinkageDefinition<E> privateLinkageDefinition;
-		
 		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
 		{
-			privateLinkageDefinition = privateLinkageDefinitions.get(linkageDefinition.getChainName());
-			if(privateLinkageDefinition == null)
-			{
-				privateLinkageDefinition = new LinkageDefinition<>(linkageDefinition.getChainName(), this);
-				privateLinkageDefinitions.put(linkageDefinition.getChainName(), privateLinkageDefinition);
-			}
-			linkageDefinition = privateLinkageDefinition;
-			link = node.getLink(linkageDefinition.getChainName());
-			if(link != null)
-			{
-				throw new ChainConflictException(linkageDefinition.getChainName(),node);
-			}
-			linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
-			if(linkBegin == null)
-			{
-				linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion, null);
-			}
-			linkEnd = partitionEnd.getLink(linkageDefinition.getChainName());
-			if(linkEnd == null)
-			{
-				linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion, null);
-			}
-			if(linkBegin.nextLink == null)
-			{
-				linkBegin.nextLink = linkEnd;
-			}
-			if(linkEnd.previewsLink == null)
-			{
-				linkEnd.previewsLink = linkBegin;
-			}
-			
-			Link<E> next = linkBegin.nextLink;
-			
-			link = node.createHead(linkageDefinition, currentVersion, LinkMode.PREPEND);
-
-			// save water ...
-			
-			// link new link with nextlink
-			next.previewsLink = link;
-			link.nextLink = next;
-			
-			// link new link with begin link
-			link.previewsLink = linkBegin;
-			
-			// set new route
-			linkBegin.nextLink = link;
-			
-			linkBegin.incrementSize();
-			linkEnd.incrementSize();
+			prependNode(node, linkageDefinition.getChainName(), currentVersion);
 		}
 	}
 	
+	protected void prependNode(Node<E> node, String chainName, SnapshotVersion<E> currentVersion)
+	{
+		LinkageDefinition<E> linkageDefinition = privateLinkageDefinitions.get(chainName);
+		if(linkageDefinition == null)
+		{
+			linkageDefinition = new LinkageDefinition<>(chainName, this);
+			privateLinkageDefinitions.put(chainName, linkageDefinition);
+		}
+		
+		Link<E> link = node.getLink(linkageDefinition.getChainName());
+		if(link != null)
+		{
+			throw new ChainConflictException(linkageDefinition.getChainName(),node);
+		}
+		Eyebolt<E> linkBegin = partitionBegin.getLink(linkageDefinition.getChainName());
+		if(linkBegin == null)
+		{
+			linkBegin = partitionBegin.createHead(linkageDefinition, currentVersion, null);
+		}
+		Eyebolt<E> linkEnd = partitionEnd.getLink(linkageDefinition.getChainName());
+		if(linkEnd == null)
+		{
+			linkEnd = partitionEnd.createHead(linkageDefinition, currentVersion, null);
+		}
+		if(linkBegin.nextLink == null)
+		{
+			linkBegin.nextLink = linkEnd;
+		}
+		if(linkEnd.previewsLink == null)
+		{
+			linkEnd.previewsLink = linkBegin;
+		}
+		
+		Link<E> next = linkBegin.nextLink;
+		
+		link = node.createHead(linkageDefinition, currentVersion, LinkMode.PREPEND);
+		// save water ...
+		
+		// link new link with nextlink
+		next.previewsLink = link;
+		link.nextLink = next;
+		
+		// link new link with begin link
+		link.previewsLink = linkBegin;
+		
+		// set new route
+		linkBegin.nextLink = link;
+		
+		linkBegin.incrementSize();
+		linkEnd.incrementSize();
+	}
+
+
 	public int getSize(String chainName)
 	{
 		multiChainList.getReadLock().lock();

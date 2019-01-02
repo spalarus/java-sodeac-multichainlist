@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
@@ -22,7 +32,7 @@ public class ClearChainTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		Node<String>[] nodes = multiChainList.appendAll(content);
+		Node<String>[] nodes = multiChainList.defaultLinker().appendAll(content);
 		assertEquals("node size should be correct ", 3, nodes.length);
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
@@ -48,7 +58,7 @@ public class ClearChainTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		Node<String>[] nodes = multiChainList.appendAll(content);
+		Node<String>[] nodes = multiChainList.defaultLinker().appendAll(content);
 		assertEquals("node size should be correct ", 3, nodes.length);
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
@@ -96,7 +106,7 @@ public class ClearChainTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		Node<String>[] nodes = multiChainList.appendAll(content);
+		Node<String>[] nodes = multiChainList.defaultLinker().appendAll(content);
 		assertEquals("node size should be correct ", 3, nodes.length);
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
@@ -142,7 +152,7 @@ public class ClearChainTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		Node<String>[] nodes = multiChainList.appendAll(content);
+		Node<String>[] nodes = multiChainList.defaultLinker().appendAll(content);
 		assertEquals("node size should be correct ", 3, nodes.length);
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Sebastian Palarus
+ * Copyright (c) 2018, 2019 Sebastian Palarus
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v2.0
  * which accompanies this distribution, and is available at
@@ -10,14 +10,13 @@
  *******************************************************************************/
 package org.sodeac.multichainlist;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.sodeac.multichainlist.MultiChainList.ChainsByPartition;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Partition.Eyebolt;
 import org.sodeac.multichainlist.Partition.LinkMode;
@@ -124,7 +123,7 @@ public class Node<E>
 				{
 					try
 					{
-						eventHandler.onClearNode(element);
+						eventHandler.onClearNode(this.multiChainList,element);
 					}
 					catch (Exception e) {}
 					catch (Error e) {}
@@ -145,75 +144,46 @@ public class Node<E>
 		headsOfAdditionalChains = null;
 	}
 	
-	@SuppressWarnings("unchecked")
-	public final void link(String chainName,Partition<E> partition, Partition.LinkMode linkMode)
-	{
-		link( (LinkageDefinition<E>[])new LinkageDefinition<?>[] {new LinkageDefinition<E>(chainName, partition)}, linkMode);
-	}
-	
-	public final void link(LinkageDefinition<E>[] linkageDefinitions, Partition.LinkMode linkMode)
-	{
-		if(linkageDefinitions == null)
-		{
-			return;
-		}
-		if(linkageDefinitions.length == 0)
-		{
-			return;
-		}
 		
-		link(Arrays.asList(linkageDefinitions), linkMode);
-	}
-	
-	public final void link(List<LinkageDefinition<E>> linkageDefinitions, Partition.LinkMode linkMode)
+	public void linkTo(String chainName, Partition<E> partition, Partition.LinkMode linkMode)
 	{
 		if(! isPayload())
 		{
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
-		if(linkageDefinitions == null)
+		Objects.requireNonNull(partition, "partition not defined");
+		if(partition.multiChainList != this.multiChainList)
 		{
-			return;
-		}
-		if(linkageDefinitions.size() == 0)
-		{
-			return;
+			throw new RuntimeException("partition not member of list");
 		}
 		multiChainList.getWriteLock().lock();
 		try
 		{
 			SnapshotVersion<E> currentVersion = multiChainList.getModificationVersion();
-			for(ChainsByPartition<E> chainsByPartition : multiChainList.refactorLinkageDefintions(linkageDefinitions).values())
+			if(linkMode == Partition.LinkMode.PREPEND)
 			{
-				if(linkMode == Partition.LinkMode.PREPEND)
-				{
-					chainsByPartition.partition.prependNode(this, chainsByPartition.chains.values(), currentVersion);
-				}
-				else
-				{
-					chainsByPartition.partition.appendNode(this, chainsByPartition.chains.values(), currentVersion);
-				}
+				partition.prependNode(this, chainName, currentVersion);
+			}
+			else
+			{
+				partition.appendNode(this, chainName, currentVersion);
 			}
 		}
 		finally 
 		{
-			multiChainList.clearRefactorLinkageDefinition();
 			multiChainList.getWriteLock().unlock();
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
-	public void relink(String fromChain, LinkageDefinition<E> linkageDefinition, Partition.LinkMode linkMode)
+	public void moveTo(String fromChain, LinkageDefinition<E> linkageDefinition, Partition.LinkMode linkMode)
 	{
-		if(linkageDefinition == null)
-		{
-			linkageDefinition = (LinkageDefinition<E>)this.multiChainList.defaultLinkageDefinition;
-		}
-		Partition<E> partition = multiChainList.getPartition(linkageDefinition.getPartition() == null ? null : linkageDefinition.getPartition().getName());
-		if(partition == null)
-		{
-			throw new NullPointerException("Partition " + linkageDefinition.getPartition() + " not found");
-		}
+		Objects.requireNonNull(linkageDefinition, "linkagedefinition not set");
+		Partition<E> partition = 
+			linkageDefinition.getPartition().multiChainList == this.multiChainList ?
+				linkageDefinition.getPartition() :
+				multiChainList.getPartition(linkageDefinition.getPartition().getName());
+				
+		Objects.requireNonNull(partition);
 		multiChainList.getWriteLock().lock();
 		try
 		{
@@ -231,7 +201,7 @@ public class Node<E>
 				unlink(destination, false);
 			}
 			
-			link(toChain, linkageDefinition.getPartition() , linkMode);
+			linkTo(toChain, linkageDefinition.getPartition() , linkMode);
 		}
 		finally 
 		{

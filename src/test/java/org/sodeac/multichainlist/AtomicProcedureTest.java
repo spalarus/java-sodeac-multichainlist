@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
@@ -13,17 +23,17 @@ public class AtomicProcedureTest
 	public void test00001ProcedureTest1() throws Exception
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<String>();
-		multiChainList.chain(null).appendAll(null, "1","2","3","5");
+		multiChainList.chain(null).defaultLinker().appendAll("1","2","3","5");
 		multiChainList.computeProcedure(m -> 
 		{
 			Chain<String> defaultChain = m.chain(null);
 			Snapshot<String> s = defaultChain.createImmutableSnapshotPoll();
 			for(String item : s)
 			{
-				defaultChain.append(item);
+				defaultChain.defaultLinker().append(item);
 				if("3".equals(item))
 				{
-					defaultChain.append("4");
+					defaultChain.defaultLinker().append("4");
 				}
 			}
 			s.close();
@@ -46,16 +56,16 @@ public class AtomicProcedureTest
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<String>();
 		Chain<String> defaultChain = multiChainList.chain(null);
-		defaultChain.appendAll(null, "1","2","3","5");
+		defaultChain.defaultLinker().appendAll("1","2","3","5");
 		defaultChain.computeProcedure(m -> 
 		{
 			Snapshot<String> s = m.createImmutableSnapshotPoll();
 			for(String item : s)
 			{
-				m.append(item);
+				m.defaultLinker().append(item);
 				if("3".equals(item))
 				{
-					m.append("4");
+					m.defaultLinker().append("4");
 				}
 			}
 			s.close();

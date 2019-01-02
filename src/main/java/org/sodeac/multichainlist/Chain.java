@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Sebastian Palarus
+ * Copyright (c) 2018, 2019 Sebastian Palarus
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v2.0
  * which accompanies this distribution, and is available at
@@ -11,15 +11,12 @@
 package org.sodeac.multichainlist;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.sodeac.multichainlist.MultiChainList.ClearCompleteForwardChain;
@@ -32,66 +29,147 @@ public class Chain<E>
 	private MultiChainList<E> multiChainList = null;
 	private String chainName = null;
 	private Partition<E>[] partitions = null;
-	private Partition<E>[] allPartitions = null;
-	private volatile Map<String,List<LinkageDefinition<E>>> definitionIndex = null;
-	private Lock definitionIndexLock = null;
+	private volatile Partition<E>[] allPartitions = null;
 	private boolean anonymSnapshotChain = false;
-	private Partition<E> defaultPartition = null;
+	private volatile Linker<E> defaultLinker =  null;
+	private volatile Map<String,Linker<E>> linkerForPartition = null;
+	private volatile boolean lockDefaultLinker = false;
+	private volatile boolean lockDispose = false;
 	
-	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<E>[] partitions,Partition<E> defaultPartition)
+	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<E>[] partitions)
 	{
 		super();
+		Objects.requireNonNull(multiChainList, "parent list not set");
+		
 		this.multiChainList = multiChainList;
 		this.chainName = chainName;
 		this.partitions = partitions;
-		this.definitionIndex = null;
-		this.definitionIndexLock = new ReentrantLock();
-		this.defaultPartition = defaultPartition;
+		
+		if(partitions != null)
+		{
+			for(int i = 0; i < partitions.length; i++)
+			{
+				partitions[i] = multiChainList.getPartition(partitions[i].getName());
+			}
+		}
+		
+		Partition<E> defaultPartition = multiChainList.defaultLinker.getPartitionForChain(this.chainName);
+		this.defaultLinker = LinkerBuilder.newBuilder()
+			.inPartition(defaultPartition == null ? this.multiChainList.lastPartition.getName() : defaultPartition.getName())
+			.linkIntoChain(this.chainName)
+			.buildLinker(this.multiChainList)
+		;
+		
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings("unchecked")
 	protected Chain(String[] partitionNames)
 	{
 		super();
-		if((partitions != null) && (partitions.length == 0))
-		{
-			partitions = null;
-		}
 		this.multiChainList = new MultiChainList<E>();
-		this.chainName = null;
-		
 		if((partitionNames == null) || (partitionNames.length == 0))
 		{
-			this.partitions = null;
-			this.defaultPartition = multiChainList.getDefaultLinkageDefinition().getPartition();
+			partitionNames = new String[] {null};
 		}
-		else
+		this.partitions = new Partition[partitionNames.length];
+		for(int i = 0; i < this.partitions.length; i++)
 		{
-			this.partitions = new Partition[partitionNames.length];
-			for(int i = 0; i < partitionNames.length; i++)
-			{
-				this.partitions[i] = this.multiChainList.definePartition(partitionNames[i]);
-			}
-			this.multiChainList.setDefaultLinkageDefitinion(new LinkageDefinition(null, this.partitions[0]));
-			this.defaultPartition = multiChainList.getDefaultLinkageDefinition().getPartition();
+			partitions[i] = multiChainList.definePartition(partitionNames[i]);
 		}
 		
-		this.definitionIndex = null;
-		this.definitionIndexLock = new ReentrantLock();
+		this.chainName = null;
+		
+		this.defaultLinker = LinkerBuilder.newBuilder()
+			.inPartition(this.multiChainList.lastPartition.getName())
+			.linkIntoChain(this.chainName)
+			.buildLinker(this.multiChainList);
+	}
+
+	public Chain<E> buildDefaultLinker(String partitionName)
+	{
+		if(lockDefaultLinker)
+		{
+			throw new RuntimeException("default linker is locked");
+		}
+		
+		checkDisposed();
+		
+		this.defaultLinker = LinkerBuilder.newBuilder()
+			.inPartition(partitionName)
+			.linkIntoChain(this.chainName)
+			.buildLinker(this.multiChainList)
+		;
+		return this;
 	}
 	
-	public Chain<E> setDefaultPartion(Partition<E> defautlPartition)
+	public Chain<E> lockDefaultLinker()
 	{
-		this.defaultPartition = defautlPartition;
+		checkDisposed();
+		this.lockDefaultLinker = true;
 		return this;
+	}
+	
+	public Linker<E> defaultLinker()
+	{
+		checkDisposed();
+		return this.defaultLinker;
+	}
+	
+	public Linker<E> linkerForPartition(String partitionName)
+	{
+		checkDisposed();
+		
+		Map<String,Linker<E>> currentLinkerForPartition = this.linkerForPartition;
+		if((currentLinkerForPartition == null) || (!currentLinkerForPartition.containsKey(partitionName)))
+		{
+			Partition<E> partition = null;
+			for(Partition<E> partitionItem : getPartitions())
+			{
+				if(partitionName == null)
+				{
+					if((partitionItem.getName() == null))
+					{
+						partition = partitionItem;
+						break;
+					}
+				}
+				else
+				{
+					if(partitionName.equals(partitionItem.getName()))
+					{
+						partition = partitionItem;
+						break;
+					}
+				}
+			}
+			
+			Objects.requireNonNull(partition, "partition " + partitionName +  " not defined in chain " + chainName);
+
+			currentLinkerForPartition = new HashMap<String,Linker<E>>();
+			
+			for(Partition<E> partitionItem : getPartitions())
+			{
+				Linker<E> linker = LinkerBuilder.newBuilder().inPartition(partitionItem.getName()).linkIntoChain(this.chainName).buildLinker(this.multiChainList);
+				currentLinkerForPartition.put(partitionItem.getName(), linker);
+			}
+			this.linkerForPartition = currentLinkerForPartition;
+		}
+		return currentLinkerForPartition.get(partitionName);
 	}
 	
 	protected Chain<E> setAnonymSnapshotChain()
 	{
+		checkDisposed();
 		this.anonymSnapshotChain = true;
 		return this;
 	}
 	
+	protected Chain<E> setLockDispose(boolean lockDispose)
+	{
+		this.lockDispose = lockDispose;
+		return this;
+	}
+
 	@SuppressWarnings("unchecked")
 	private Partition<E>[] getPartitions()
 	{
@@ -109,6 +187,8 @@ public class Chain<E>
 	
 	public Partition<E> getPartition(String partitionName)
 	{
+		checkDisposed();
+		
 		if(partitionName == null)
 		{
 			for(Partition<E> partition : getPartitions())
@@ -131,55 +211,11 @@ public class Chain<E>
 		}
 		return null;
 	}
-	private List<LinkageDefinition<E>> getLinkageDefinition(Partition<E> partition)
-	{
-		if(partition == null)
-		{
-			partition = defaultPartition;
-		}	
-		String partitionName = partition == null ? null : partition.getName();
-		List<LinkageDefinition<E>> linkageDefinitionList = null;
-		Map<String,List<LinkageDefinition<E>>> index = this.definitionIndex;
-		if(index != null)
-		{
-			linkageDefinitionList = index.get(partitionName);
-			if(linkageDefinitionList != null)
-			{
-				return linkageDefinitionList;
-			}
-		}
-		this.definitionIndexLock.lock();
-		try
-		{
-			if(this.definitionIndex != null)
-			{
-				linkageDefinitionList = this.definitionIndex.get(partitionName);
-				if(linkageDefinitionList != null)
-				{
-					return linkageDefinitionList;
-				}
-			}
-			
-			LinkageDefinition<E> linkageDefinition = new LinkageDefinition<>(this.chainName, this.multiChainList.getPartition(partitionName));
-			linkageDefinitionList = new ArrayList<>(1);
-			linkageDefinitionList.add(linkageDefinition);
-			index = new HashMap<String,List<LinkageDefinition<E>>>();
-			if(this.definitionIndex != null)
-			{
-				index.putAll(this.definitionIndex);
-			}
-			index.put(partitionName, linkageDefinitionList);
-			this.definitionIndex = index;			
-		}
-		finally 
-		{
-			this.definitionIndexLock.unlock();
-		}
-		return linkageDefinitionList;
-	}
 	
 	public int getSize()
 	{
+		checkDisposed();
+		
 		multiChainList.getReadLock().lock();
 		try
 		{
@@ -198,78 +234,32 @@ public class Chain<E>
 		}
 	}
 	
-	public final Node<E> append(E element)
-	{
-		return append(null,element);
-	}
-	
-	public final Node<E> append(Partition<E> partition, E element)
-	{
-		return this.multiChainList.append(element, getLinkageDefinition(partition));
-	}
-	
-	@SafeVarargs
-	public final Node<E>[] appendAll(Partition<E> partition, E... elements)
-	{
-		return this.multiChainList.appendAll(Arrays.<E>asList(elements), getLinkageDefinition(partition));
-	}
-	
-	public Node<E>[] appendAll(Partition<E> partition, Collection<E> elements)
-	{
-		return this.multiChainList.appendAll(elements, getLinkageDefinition(partition));
-	}
-	
-	public final Node<E> prepend(E element)
-	{
-		return this.prepend(null, element);
-	}
-	public final Node<E> prepend(Partition<E> partition, E element)
-	{
-		return this.multiChainList.prepend(element, getLinkageDefinition(partition));
-	}
-	
-	@SafeVarargs
-	public final Node<E>[] prependAll(Partition<E> partition, E... elements)
-	{
-		return this.multiChainList.prependAll(Arrays.<E>asList(elements), getLinkageDefinition(partition));
-	}
-	
-	public Node<E>[] prependAll(Partition<E> partition, Collection<E> elements)
-	{
-		return this.multiChainList.prependAll(elements, getLinkageDefinition(partition));
-	}
-	
 	public void dispose()
 	{
-		definitionIndexLock.lock();
-		try
+		if(this.lockDispose)
 		{
-			if(definitionIndex != null)
-			{
-				for(List<LinkageDefinition<E>> list : definitionIndex.values())
-				{
-					if(list != null)
-					{
-						list.clear();
-					}
-				}
-				definitionIndex.clear();
-			}
-		}
-		finally 
-		{
-			definitionIndexLock.unlock();
+			throw new RuntimeException("dispose is locked for chain " + chainName);
 		}
 		this.multiChainList = null;
 		this.chainName = null;
 		this.partitions = null;
 		this.allPartitions = null;
-		this.definitionIndex = null;
-		this.definitionIndexLock = null;
+		this.defaultLinker = null;
+		if(linkerForPartition != null)
+		{
+			try
+			{
+				linkerForPartition.clear();
+			}
+			catch (Exception e) {}
+		}
+		linkerForPartition = null;
 	}
 	
 	public Chain<E> clear()
 	{
+		checkDisposed();
+		
 		multiChainList.writeLock.lock();
 		try
 		{
@@ -332,11 +322,15 @@ public class Chain<E>
 	
 	public Snapshot<E> createImmutableSnapshot()
 	{
+		checkDisposed();
+		
 		return new ChainSnapshot<E>(this, false);
 	}
 	
 	public Snapshot<E> createImmutableSnapshotPoll()
 	{
+		checkDisposed();
+		
 		return new ChainSnapshot<E>(this, true);
 	}
 	
@@ -347,6 +341,8 @@ public class Chain<E>
 	 */
 	public void computeProcedure(Consumer<Chain<E>> procedure)
 	{
+		checkDisposed();
+		
 		multiChainList.writeLock.lock();
 		try
 		{
@@ -355,6 +351,14 @@ public class Chain<E>
 		finally 
 		{
 			multiChainList.writeLock.unlock();
+		}
+	}
+	
+	private void checkDisposed()
+	{
+		if(this.multiChainList == null)
+		{
+			throw new RuntimeException("chain is disposed");
 		}
 	}
 	

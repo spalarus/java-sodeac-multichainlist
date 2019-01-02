@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
@@ -5,7 +15,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.junit.FixMethodOrder;
@@ -37,7 +46,7 @@ public class AppendBlackboxTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		Node<String>[] nodes = multiChainList.appendAll(content);
+		Node<String>[] nodes = multiChainList.defaultLinker.appendAll(content);
 		
 		Partition<String> partition = multiChainList.getPartition(null);
 		
@@ -88,13 +97,9 @@ public class AppendBlackboxTest
 		
 		Partition<String> partition = multiChainList.getPartition(null);
 		
-		LinkageDefinition[] linkageDefintion = new LinkageDefinition[] 
-		{
-				new LinkageDefinition(null,partition),
-				new LinkageDefinition("test",partition)
-		};
+		Linker<String> customLinker = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain(null).linkIntoChain("test").buildLinker(multiChainList);
 		
-		Node<String>[] nodes = multiChainList.appendAll(content, Arrays.asList(linkageDefintion));
+		Node<String>[] nodes = customLinker.appendAll(content);
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		assertEquals("chain size should be correct ", content.size(), partition.getSize(null));
@@ -129,11 +134,7 @@ public class AppendBlackboxTest
 
 		snapshot1.close();
 		
-		Partition partition2 = multiChainList.definePartition("part2");
-		LinkageDefinition[] linkageDefintion2 = new LinkageDefinition[] 
-		{
-				new LinkageDefinition("test2",partition2)
-		};
+		Partition<String> partition2 = multiChainList.definePartition("part2");
 		
 		Snapshot<String> snapshot2 = multiChainList.chain("test").createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
@@ -159,7 +160,7 @@ public class AppendBlackboxTest
 			assertNull("partitionname should be correct",partition.getName());
 			
 			item.unlink("test");
-			item.link(linkageDefintion2, Partition.LinkMode.APPEND);
+			item.linkTo("test2",partition2, Partition.LinkMode.APPEND);
 			index++;
 		}
 		assertEquals("size of snapshot should be correct", content.size(),  index);
@@ -223,7 +224,7 @@ public class AppendBlackboxTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		multiChainList.appendAll(content);
+		multiChainList.defaultLinker.appendAll(content);
 		
 		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot.size() should be correct ", content.size(), snapshot1.size());
@@ -248,7 +249,7 @@ public class AppendBlackboxTest
 		content.add("1");
 		content.add("2");
 		content.add("3");
-		multiChainList.appendAll(content);
+		multiChainList.defaultLinker.appendAll(content);
 		
 		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
@@ -280,7 +281,7 @@ public class AppendBlackboxTest
 		content2.add("5");
 		content2.add("6");
 		
-		multiChainList.appendAll(content1);
+		multiChainList.defaultLinker.appendAll(content1);
 		
 		assertEquals("list size should be correct ", content1.size(), multiChainList.getNodeSize());
 		
@@ -290,7 +291,7 @@ public class AppendBlackboxTest
 		
 		snapshot1.close();
 		
-		multiChainList.appendAll(content2); // no opening snapshot => no snapshot version => does not create new modified version
+		multiChainList.defaultLinker.appendAll(content2); // no opening snapshot => no snapshot version => does not create new modified version
 		
 		assertEquals("list size should be correct ", content1.size() + content2.size(), multiChainList.getNodeSize());
 		
@@ -320,13 +321,13 @@ public class AppendBlackboxTest
 		content2.add("5");contentX.add("5");
 		content2.add("6");contentX.add("6");
 		
-		Node<String>[] nodes1 = multiChainList.appendAll(content1);
+		Node<String>[] nodes1 = multiChainList.defaultLinker.appendAll(content1);
 		
 		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot1);
 		assertEquals("snapshot.size() should be correct ", content1.size(), snapshot1.size());
 		
-		Node<String>[] nodes2 = multiChainList.appendAll(content2);
+		Node<String>[] nodes2 = multiChainList.defaultLinker.appendAll(content2);
 		
 		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertNotNull("snapshot should not be null", snapshot2);
@@ -398,7 +399,7 @@ public class AppendBlackboxTest
 		content1.add("2");
 		content1.add("3");
 		
-		Node<String>[] nodes = multiChainList.appendAll(content1);
+		Node<String>[] nodes = multiChainList.defaultLinker.appendAll(content1);
 		
 		assertEquals("list size should be correct ", content1.size(), multiChainList.getNodeSize());
 
@@ -475,7 +476,7 @@ public class AppendBlackboxTest
 		List<String> content1 = new ArrayList<String>();
 		content1.add("1");
 		
-		multiChainList.appendAll(content1);
+		multiChainList.defaultLinker.appendAll(content1);
 		Snapshot<String> snapshot2 = multiChainList.chain(null).createImmutableSnapshot();
 		assertEquals("snapshot2 size should be correct",content1.size(), snapshot2.size());
 		
@@ -499,7 +500,7 @@ public class AppendBlackboxTest
 		List<String> content2 = new ArrayList<String>();
 		content2.add("2");
 		
-		multiChainList.appendAll(content2);
+		multiChainList.defaultLinker.appendAll(content2);
 		content2 = new ArrayList<String>();
 		content2.add("1");
 		content2.add("2");
@@ -575,7 +576,7 @@ public class AppendBlackboxTest
 		List<String> content1 = new ArrayList<String>();
 		content1.add("1");
 		
-		multiChainList.appendAll(content1);
+		multiChainList.defaultLinker.appendAll(content1);
 
 		
 		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
@@ -631,7 +632,7 @@ public class AppendBlackboxTest
 		List<String> content1 = new ArrayList<String>();
 		content1.add("1");
 		
-		multiChainList.appendAll(content1);
+		multiChainList.defaultLinker.appendAll(content1);
 
 		
 		Snapshot<String> snapshot1 = multiChainList.chain(null).createImmutableSnapshot();
@@ -687,15 +688,15 @@ public class AppendBlackboxTest
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<String>();
 		
-		
 		Chain<String> chain = multiChainList.chain(null);
 		
 		List<String> content1 = new ArrayList<String>();
 		content1.add("1");
 		content1.add("2");
-		chain.appendAll(null, content1);
 		
-		chain.append(null, "3");
+		chain.defaultLinker().appendAll(content1);
+		
+		chain.defaultLinker().append("3");
 		
 		content1 = new ArrayList<String>();
 		content1.add("4");
@@ -704,7 +705,7 @@ public class AppendBlackboxTest
 		
 		Partition<String> partitionP = multiChainList.definePartition("P");
 		
-		chain.prependAll(partitionP, content1);
+		chain.linkerForPartition("P").prependAll(content1);
 		
 		assertEquals("size should be correct", 6, multiChainList.getNodeSize());
 		assertEquals("size should be correct", 3, multiChainList.getPartition(null).getSize(null));

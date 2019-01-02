@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
@@ -41,7 +51,7 @@ public class ChainEventHandlerBlackBoxTest
 		};
 		multiChainList.registerChainEventHandler(eventHandler);
 		
-		Node<String> node1 = multiChainList.append("e1");
+		Node<String> node1 = multiChainList.defaultLinker().append("e1");
 		
 		assertEquals("list size should be correct ", 1L, multiChainList.getNodeSize());
 		
@@ -53,7 +63,7 @@ public class ChainEventHandlerBlackBoxTest
 		
 		assertEquals("linkSize should be correct", 1, node1.linkSize());
 		
-		node1.link("chain1", null, LinkMode.APPEND);
+		node1.linkTo("chain1",multiChainList.getPartition(null), LinkMode.APPEND);
 		
 		assertEquals("container should have correct size",1, containerLinkNode.size());
 		assertEquals("container should have correct size",1, containerLinkChainName.size());

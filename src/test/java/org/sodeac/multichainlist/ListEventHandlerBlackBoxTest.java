@@ -1,11 +1,18 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
 import org.junit.Test;
 import org.sodeac.multichainlist.Partition.LinkMode;
@@ -19,52 +26,54 @@ public class ListEventHandlerBlackBoxTest
 		
 		IListEventHandler<String> dispatcher = new IListEventHandler<String>()
 		{
-			List<LinkageDefinition<String>> linkageDefinitions1 = Collections.unmodifiableList(Arrays.asList(new LinkageDefinition<>("chain1", null)));
-			List<LinkageDefinition<String>> linkageDefinitions2 = Collections.unmodifiableList(Arrays.asList(new LinkageDefinition<>("chain2", null)));
-			List<LinkageDefinition<String>> linkageDefinitions3 = Collections.unmodifiableList(Arrays.asList(new LinkageDefinition<>("chain3", null)));
+			Linker<String>.LinkageDefinitionContainer container1 = Linker.createLinkageDefinitionContainer(LinkerBuilder.newBuilder().linkIntoChain("chain1"),multiChainList);
+			Linker<String>.LinkageDefinitionContainer container2 = Linker.createLinkageDefinitionContainer(LinkerBuilder.newBuilder().linkIntoChain("chain2"),multiChainList);
+			Linker<String>.LinkageDefinitionContainer container3 = Linker.createLinkageDefinitionContainer(LinkerBuilder.newBuilder().linkIntoChain("chain3"),multiChainList);
 			
-			@Override
-			public List<LinkageDefinition<String>> onCreateNode(String element,List<LinkageDefinition<String>> linkageDefinitions, LinkMode linkMode)
+			private Linker<String>.LinkageDefinitionContainer onCreateNode(MultiChainList<String> multiChainList, String element, Linker<String>.LinkageDefinitionContainer linkageDefinitionContainer, LinkMode linkMode)
 			{
 				if(element.startsWith("a"))
 				{
-					return linkageDefinitions1;
+					return container1;
 				}
 				
 				if(element.startsWith("b"))
 				{
-					return linkageDefinitions2;
+					return container2;
 				}
 				
 				if(element.startsWith("c"))
 				{
-					return linkageDefinitions3;
+					return container3;
 				}
 				
 				return null;
 			}
 			
 			@Override
-			public void onClearNode(String element){}
+			public void onClearNode(MultiChainList<String> multiChainList, String element){}
 			
 			@Override
-			public List<LinkageDefinition<String>> onCreateNodeList(Collection<String> elements, List<LinkageDefinition<String>> linkageDefinitions, LinkMode linkMode) { return null; }
+			public Linker<String>.LinkageDefinitionContainer onCreateNodes(MultiChainList<String> multiChainList,Collection<String> elements, Linker<String>.LinkageDefinitionContainer linkageDefinitionContainer, LinkMode linkMode)
+			{
+				return onCreateNode(multiChainList, elements.iterator().next(), linkageDefinitionContainer, linkMode);
+			}
 		};
 		
 		multiChainList.registerListEventHandler(dispatcher);
 		
-		multiChainList.append("a1");
-		multiChainList.append("a2");
-		multiChainList.append("a3");
-		multiChainList.append("b1");
-		multiChainList.append("b2");
-		multiChainList.append("b3");
-		multiChainList.append("c1");
-		multiChainList.append("c2");
-		multiChainList.append("c3");
-		multiChainList.append("d1");
-		multiChainList.append("d2");
-		multiChainList.append("d3");
+		multiChainList.defaultLinker().append("a1");
+		multiChainList.defaultLinker().append("a2");
+		multiChainList.defaultLinker().append("a3");
+		multiChainList.defaultLinker().append("b1");
+		multiChainList.defaultLinker().append("b2");
+		multiChainList.defaultLinker().append("b3");
+		multiChainList.defaultLinker().append("c1");
+		multiChainList.defaultLinker().append("c2");
+		multiChainList.defaultLinker().append("c3");
+		multiChainList.defaultLinker().append("d1");
+		multiChainList.defaultLinker().append("d2");
+		multiChainList.defaultLinker().append("d3");
 		
 		assertEquals("list size should be correct ", 12L, multiChainList.getNodeSize());
 		

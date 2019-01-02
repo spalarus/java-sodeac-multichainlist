@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
@@ -30,7 +40,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println("Insert Element '1'");
 		
-		Node<String> node1 = mcl.append("1");
+		Node<String> node1 = mcl.defaultLinker().append("1");
 		assertEquals("ManagedSize of List should be correct",1L,mcl.getNodeSize());
 		assertEquals("Size of List should be correct",1L,listCounter.getSize());
 		
@@ -156,7 +166,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println("Insert Element '1'");
 		
-		Node<String> node1 = mcl.append("1");
+		Node<String> node1 = mcl.defaultLinker().append("1");
 		assertEquals("ManagedSize of List should be correct",1L,listCounter.getSize());
 		assertEquals("Size of List should be correct",1L,mcl.getNodeSize());
 		
@@ -384,7 +394,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println("Insert Element '1'");
 		
-		Node<String> node1 = mcl.append("1");
+		Node<String> node1 = mcl.defaultLinker().append("1");
 		assertEquals("ManagedSize of List should be correct",1L,listCounter.getSize());
 		assertEquals("Size of List should be correct",1L,mcl.getNodeSize());
 		

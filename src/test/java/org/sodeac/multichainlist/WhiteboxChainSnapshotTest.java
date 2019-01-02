@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2019 Sebastian Palarus
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v2.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v20.html
+ *
+ * Contributors:
+ *     Sebastian Palarus - initial API and implementation
+ *******************************************************************************/
 package org.sodeac.multichainlist;
 
 import static org.junit.Assert.assertEquals;
@@ -15,26 +25,26 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition2 = mcl.definePartition("partition2");
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
-		LinkageDefinition<String> definition1 = new LinkageDefinition<String>("chain", partition1);
-		LinkageDefinition<String> definition2 = new LinkageDefinition<String>("chain", partition2);
-		LinkageDefinition<String> definition3 = new LinkageDefinition<String>("chain", partition3);
+		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
 		
-		LinkageDefinition<String> definitionA = new LinkageDefinition<String>("niahc", partition1);
-		LinkageDefinition<String> definitionB = new LinkageDefinition<String>("niahc", partition2);
-		LinkageDefinition<String> definitionC = new LinkageDefinition<String>("niahc", partition3);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
 		
-		mcl.append("1",definition1);
-		mcl.append("2",definitionA);
-		mcl.append("3",definition1);
-		mcl.append("4",definitionA);
-		mcl.append("5",definition2);
-		mcl.append("6",definitionB);
-		mcl.append("7",definition2);
-		mcl.append("8",definitionB);
-		mcl.append("9",definition3);
-		mcl.append("10",definitionC);
-		mcl.append("11",definition3);
-		mcl.append("12",definitionC);
+		linker1.append("1");
+		linkerA.append("2");
+		linker1.append("3");
+		linkerA.append("4");
+		linker2.append("5");
+		linkerB.append("6");
+		linker2.append("7");
+		linkerB.append("8");
+		linker3.append("9");
+		linkerC.append("10");
+		linker3.append("11");
+		linkerC.append("12");
 		
 		Chain<String> chain1 = mcl.chain("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
@@ -66,26 +76,26 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition2 = mcl.definePartition("partition2");
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
-		LinkageDefinition<String> definition1 = new LinkageDefinition<String>("chain", partition1);
-		LinkageDefinition<String> definition2 = new LinkageDefinition<String>("chain", partition2);
-		LinkageDefinition<String> definition3 = new LinkageDefinition<String>("chain", partition3);
+		// Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
 		
-		LinkageDefinition<String> definitionA = new LinkageDefinition<String>("niahc", partition1);
-		LinkageDefinition<String> definitionB = new LinkageDefinition<String>("niahc", partition2);
-		LinkageDefinition<String> definitionC = new LinkageDefinition<String>("niahc", partition3);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
 		
-		mcl.append("x",definitionA);
-		mcl.append("x",definitionA);
-		mcl.append("x",definitionA);
-		mcl.append("x",definitionA);
-		mcl.append("1",definition2);
-		mcl.append("2",definitionB);
-		mcl.append("3",definition2);
-		mcl.append("4",definitionB);
-		mcl.append("5",definition3);
-		mcl.append("6",definitionC);
-		mcl.append("7",definition3);
-		mcl.append("8",definitionC);
+		linkerA.append("x");
+		linkerA.append("x");
+		linkerA.append("x");
+		linkerA.append("x");
+		linker2.append("1");
+		linkerB.append("2");
+		linker2.append("3");
+		linkerB.append("4");
+		linker3.append("5");
+		linkerC.append("6");
+		linker3.append("7");
+		linkerC.append("8");
 		
 		Chain<String> chain1 = mcl.chain("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
@@ -107,26 +117,26 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition2 = mcl.definePartition("partition2");
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
-		LinkageDefinition<String> definition1 = new LinkageDefinition<String>("chain", partition1);
-		LinkageDefinition<String> definition2 = new LinkageDefinition<String>("chain", partition2);
-		LinkageDefinition<String> definition3 = new LinkageDefinition<String>("chain", partition3);
+		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
+		// Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
 		
-		LinkageDefinition<String> definitionA = new LinkageDefinition<String>("niahc", partition1);
-		LinkageDefinition<String> definitionB = new LinkageDefinition<String>("niahc", partition2);
-		LinkageDefinition<String> definitionC = new LinkageDefinition<String>("niahc", partition3);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
 		
-		mcl.append("1",definition1);
-		mcl.append("2",definitionA);
-		mcl.append("3",definition1);
-		mcl.append("4",definitionA);
-		mcl.append("x",definitionB);
-		mcl.append("x",definitionB);
-		mcl.append("x",definitionB);
-		mcl.append("x",definitionB);
-		mcl.append("5",definition3);
-		mcl.append("6",definitionC);
-		mcl.append("7",definition3);
-		mcl.append("8",definitionC);
+		linker1.append("1");
+		linkerA.append("2");
+		linker1.append("3");
+		linkerA.append("4");
+		linkerB.append("x");
+		linkerB.append("x");
+		linkerB.append("x");
+		linkerB.append("x");
+		linker3.append("5");
+		linkerC.append("6");
+		linker3.append("7");
+		linkerC.append("8");
 		
 		Chain<String> chain1 = mcl.chain("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
@@ -149,26 +159,26 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition2 = mcl.definePartition("partition2");
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
-		LinkageDefinition<String> definition1 = new LinkageDefinition<String>("chain", partition1);
-		LinkageDefinition<String> definition2 = new LinkageDefinition<String>("chain", partition2);
-		LinkageDefinition<String> definition3 = new LinkageDefinition<String>("chain", partition3);
+		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
+		//Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
 		
-		LinkageDefinition<String> definitionA = new LinkageDefinition<String>("niahc", partition1);
-		LinkageDefinition<String> definitionB = new LinkageDefinition<String>("niahc", partition2);
-		LinkageDefinition<String> definitionC = new LinkageDefinition<String>("niahc", partition3);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
 		
-		mcl.append("1",definition1);
-		mcl.append("2",definitionA);
-		mcl.append("3",definition1);
-		mcl.append("4",definitionA);
-		mcl.append("5",definition2);
-		mcl.append("6",definitionB);
-		mcl.append("7",definition2);
-		mcl.append("8",definitionB);
-		mcl.append("5",definitionC);
-		mcl.append("6",definitionC);
-		mcl.append("7",definitionC);
-		mcl.append("8",definitionC);
+		linker1.append("1");
+		linkerA.append("2");
+		linker1.append("3");
+		linkerA.append("4");
+		linker2.append("5");
+		linkerB.append("6");
+		linker2.append("7");
+		linkerB.append("8");
+		linkerC.append("5");
+		linkerC.append("6");
+		linkerC.append("7");
+		linkerC.append("8");
 		
 		Chain<String> chain1 = mcl.chain("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
