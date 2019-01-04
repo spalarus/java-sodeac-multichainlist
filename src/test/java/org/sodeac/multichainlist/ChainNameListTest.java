@@ -25,9 +25,9 @@ public class ChainNameListTest
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<String>();
 		
-		Linker<String> ln1 = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain("ch1").buildLinker(multiChainList);
-		Linker<String> ln2 = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain("ch2").buildLinker(multiChainList);
-		Linker<String> lnX = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain("ch1").linkIntoChain("ch2").linkIntoChain("ch3").buildLinker(multiChainList);
+		Linker<String> ln1 = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain("ch1").build(multiChainList);
+		Linker<String> ln2 = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain("ch2").build(multiChainList);
+		Linker<String> lnX = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain("ch1").linkIntoChain("ch2").linkIntoChain("ch3").build(multiChainList);
 		
 		List<String> cnl1 = multiChainList.getChainNameList();
 		assertEquals("size of chain name list should be correct", 0, cnl1.size());

@@ -11,10 +11,8 @@
 package org.sodeac.multichainlist;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -26,13 +24,12 @@ import org.sodeac.multichainlist.Partition.Eyebolt;
 
 public class Chain<E>
 {
-	private MultiChainList<E> multiChainList = null;
+	protected MultiChainList<E> multiChainList = null;
 	private String chainName = null;
 	private Partition<E>[] partitions = null;
 	private volatile Partition<E>[] allPartitions = null;
 	private boolean anonymSnapshotChain = false;
 	private volatile Linker<E> defaultLinker =  null;
-	private volatile Map<String,Linker<E>> linkerForPartition = null;
 	private volatile boolean lockDefaultLinker = false;
 	private volatile boolean lockDispose = false;
 	
@@ -57,7 +54,7 @@ public class Chain<E>
 		this.defaultLinker = LinkerBuilder.newBuilder()
 			.inPartition(defaultPartition == null ? this.multiChainList.lastPartition.getName() : defaultPartition.getName())
 			.linkIntoChain(this.chainName)
-			.buildLinker(this.multiChainList)
+			.build(this.multiChainList)
 		;
 		
 	}
@@ -82,7 +79,7 @@ public class Chain<E>
 		this.defaultLinker = LinkerBuilder.newBuilder()
 			.inPartition(this.multiChainList.lastPartition.getName())
 			.linkIntoChain(this.chainName)
-			.buildLinker(this.multiChainList);
+			.build(this.multiChainList);
 	}
 
 	public Chain<E> buildDefaultLinker(String partitionName)
@@ -97,7 +94,7 @@ public class Chain<E>
 		this.defaultLinker = LinkerBuilder.newBuilder()
 			.inPartition(partitionName)
 			.linkIntoChain(this.chainName)
-			.buildLinker(this.multiChainList)
+			.build(this.multiChainList)
 		;
 		return this;
 	}
@@ -115,46 +112,10 @@ public class Chain<E>
 		return this.defaultLinker;
 	}
 	
-	public Linker<E> linkerForPartition(String partitionName)
+	public Linker<E> cachedLinker(String partitionName)
 	{
 		checkDisposed();
-		
-		Map<String,Linker<E>> currentLinkerForPartition = this.linkerForPartition;
-		if((currentLinkerForPartition == null) || (!currentLinkerForPartition.containsKey(partitionName)))
-		{
-			Partition<E> partition = null;
-			for(Partition<E> partitionItem : getPartitions())
-			{
-				if(partitionName == null)
-				{
-					if((partitionItem.getName() == null))
-					{
-						partition = partitionItem;
-						break;
-					}
-				}
-				else
-				{
-					if(partitionName.equals(partitionItem.getName()))
-					{
-						partition = partitionItem;
-						break;
-					}
-				}
-			}
-			
-			Objects.requireNonNull(partition, "partition " + partitionName +  " not defined in chain " + chainName);
-
-			currentLinkerForPartition = new HashMap<String,Linker<E>>();
-			
-			for(Partition<E> partitionItem : getPartitions())
-			{
-				Linker<E> linker = LinkerBuilder.newBuilder().inPartition(partitionItem.getName()).linkIntoChain(this.chainName).buildLinker(this.multiChainList);
-				currentLinkerForPartition.put(partitionItem.getName(), linker);
-			}
-			this.linkerForPartition = currentLinkerForPartition;
-		}
-		return currentLinkerForPartition.get(partitionName);
+		return this.multiChainList.cachedLinkerBuilder().inPartition(partitionName).linkIntoChain(this.chainName).build();
 	}
 	
 	protected Chain<E> setAnonymSnapshotChain()
@@ -244,16 +205,15 @@ public class Chain<E>
 		this.chainName = null;
 		this.partitions = null;
 		this.allPartitions = null;
-		this.defaultLinker = null;
-		if(linkerForPartition != null)
+		if(this.defaultLinker != null)
 		{
 			try
 			{
-				linkerForPartition.clear();
+				this.defaultLinker.dispose();
 			}
 			catch (Exception e) {}
 		}
-		linkerForPartition = null;
+		this.defaultLinker = null;
 	}
 	
 	public Chain<E> clear()

@@ -21,6 +21,13 @@ public class SingleChainList<E> extends Chain<E>
 	{
 		super(partitions);
 	}
+
+	@Override
+	public void dispose()
+	{
+		super.multiChainList.dispose();
+		super.dispose();
+	}
 	
 	
 }

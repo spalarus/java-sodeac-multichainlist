@@ -68,9 +68,32 @@ public class LinkerBuilder
 		return this;
 	}
 	
-	public <E> Linker<E> buildLinker(MultiChainList<E> multiChainList) 
+	public <E> Linker<E> build(MultiChainList<E> multiChainList) 
 	{
 		complete();
 		return new Linker<E>(multiChainList,chainsByPartition);
+	}
+	
+	protected void dispose()
+	{
+		for(Set<String> value : chainsByPartition.values())
+		{
+			if(value != null)
+			{
+				try
+				{
+					value.clear();
+				}
+				catch (Exception e) {}
+			}
+		}
+		try
+		{
+			chainsByPartition.clear();
+		}
+		catch (Exception e) {}
+		
+		workPartitionName = null;
+		chainsByPartition = null;
 	}
 }

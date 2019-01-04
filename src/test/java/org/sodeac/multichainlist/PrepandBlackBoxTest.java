@@ -15,7 +15,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
@@ -94,7 +93,7 @@ public class PrepandBlackBoxTest
 		
 		Partition<String> partition = multiChainList.getPartition(null);
 		
-		Linker<String> customLinker = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain(null).linkIntoChain("test").buildLinker(multiChainList);
+		Linker<String> customLinker = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain(null).linkIntoChain("test").build(multiChainList);
 		
 		Node<String>[] nodes = customLinker.prependAll(content);
 		
@@ -731,7 +730,7 @@ public class PrepandBlackBoxTest
 		
 		Partition<String> partitionP = multiChainList.definePartition("P");
 		
-		chain.linkerForPartition("P").prependAll(content1);
+		chain.cachedLinker("P").prependAll(content1);
 		
 		assertEquals("size should be correct", 6, multiChainList.getNodeSize());
 		assertEquals("size should be correct", 3, multiChainList.getPartition(null).getSize(null));

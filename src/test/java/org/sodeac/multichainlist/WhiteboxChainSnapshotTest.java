@@ -25,13 +25,13 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition2 = mcl.definePartition("partition2");
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
-		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
-		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
-		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").build(mcl);
+		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").build(mcl);
+		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").build(mcl);
 		
-		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").build(mcl);
 		
 		linker1.append("1");
 		linkerA.append("2");
@@ -77,12 +77,12 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
 		// Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
-		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
-		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").build(mcl);
+		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").build(mcl);
 		
-		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").build(mcl);
 		
 		linkerA.append("x");
 		linkerA.append("x");
@@ -117,13 +117,13 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition2 = mcl.definePartition("partition2");
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
-		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").build(mcl);
 		// Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
-		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").build(mcl);
 		
-		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").build(mcl);
 		
 		linker1.append("1");
 		linkerA.append("2");
@@ -159,13 +159,13 @@ public class WhiteboxChainSnapshotTest
 		Partition<String> partition2 = mcl.definePartition("partition2");
 		Partition<String> partition3 = mcl.definePartition("partition3");
 		
-		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").buildLinker(mcl);
-		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").buildLinker(mcl);
+		Linker<String> linker1 = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("chain").build(mcl);
+		Linker<String> linker2 = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("chain").build(mcl);
 		//Linker<String> linker3 = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("chain").buildLinker(mcl);
 		
-		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").buildLinker(mcl);
-		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").buildLinker(mcl);
+		Linker<String> linkerA = LinkerBuilder.newBuilder().inPartition(partition1.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerB = LinkerBuilder.newBuilder().inPartition(partition2.getName()).linkIntoChain("niahc").build(mcl);
+		Linker<String> linkerC = LinkerBuilder.newBuilder().inPartition(partition3.getName()).linkIntoChain("niahc").build(mcl);
 		
 		linker1.append("1");
 		linkerA.append("2");

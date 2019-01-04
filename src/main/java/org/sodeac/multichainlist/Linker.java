@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -24,14 +25,22 @@ import java.util.Set;
 public class Linker<E>
 {
 	private MultiChainList<E> multiChainList = null;
-	private Map<String,Set<String>> chainsByPartition = new HashMap<String,Set<String>>();
+	private Map<String,Set<String>> chainsByPartition = null;
 	private volatile LinkageDefinitionContainer linkageDefinitionContainer = null;
 	
 	protected Linker(MultiChainList<E> multiChainList,Map<String,Set<String>> chainsByPartition)
 	{
 		super();
 		this.multiChainList = multiChainList;
-		this.chainsByPartition = chainsByPartition;
+		this.chainsByPartition = new HashMap<String,Set<String>>();
+		
+		if(chainsByPartition != null)
+		{
+			for(Entry<String,Set<String>> entry : chainsByPartition.entrySet())
+			{
+				this.chainsByPartition.put(entry.getKey(), new HashSet<String>(entry.getValue()));
+			}
+		}
 	}
 	
 	public LinkageDefinitionContainer getLinkageDefinitionContainer()
@@ -293,10 +302,75 @@ public class Linker<E>
 			return linkageDefinitionList;
 		}
 		
+		private void dispose()
+		{
+			try
+			{
+				for(Map<String,LinkageDefinition<E>> value :indexedByPartitionAndChain.values())
+				{
+					try
+					{
+						value.clear();
+					}
+					catch (Exception e) {}
+				}
+				indexedByPartitionAndChain.clear();
+			}
+			catch (Exception e) {}
+			
+			try
+			{
+				indexedByChain.clear();
+			}
+			catch (Exception e) {}
+			
+			try
+			{
+				linkageDefinitionList.clear();
+			}
+			catch (Exception e) {}
+			
+			this.indexedByChain = null;
+			this.linkageDefinitionList = null;
+			this.multiChainList = null;
+			this.indexedByPartitionAndChain = null;
+		}
+		
 	}
 	
 	public static <T> Linker<T>.LinkageDefinitionContainer createLinkageDefinitionContainer(LinkerBuilder builder, MultiChainList<T> multiChainList)
 	{
-		return builder.buildLinker(multiChainList).getLinkageDefinitionContainer();
+		return builder.build(multiChainList).getLinkageDefinitionContainer();
+	}
+	
+	protected void dispose()
+	{
+		for(Set<String> value : chainsByPartition.values())
+		{
+			if(value != null)
+			{
+				try
+				{
+					value.clear();
+				}
+				catch (Exception e) {}
+			}
+		}
+		try
+		{
+			chainsByPartition.clear();
+		}
+		catch (Exception e) {}
+		
+		if(linkageDefinitionContainer != null)
+		{
+			try
+			{
+				linkageDefinitionContainer.dispose();
+			}
+			catch (Exception e) {}
+		}
+		this.multiChainList = null;
+		this.chainsByPartition = null;
 	}
 }

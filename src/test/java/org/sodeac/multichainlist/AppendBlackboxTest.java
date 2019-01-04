@@ -97,7 +97,7 @@ public class AppendBlackboxTest
 		
 		Partition<String> partition = multiChainList.getPartition(null);
 		
-		Linker<String> customLinker = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain(null).linkIntoChain("test").buildLinker(multiChainList);
+		Linker<String> customLinker = LinkerBuilder.newBuilder().inPartition(null).linkIntoChain(null).linkIntoChain("test").build(multiChainList);
 		
 		Node<String>[] nodes = customLinker.appendAll(content);
 		
@@ -705,7 +705,7 @@ public class AppendBlackboxTest
 		
 		Partition<String> partitionP = multiChainList.definePartition("P");
 		
-		chain.linkerForPartition("P").prependAll(content1);
+		chain.cachedLinker("P").prependAll(content1);
 		
 		assertEquals("size should be correct", 6, multiChainList.getNodeSize());
 		assertEquals("size should be correct", 3, multiChainList.getPartition(null).getSize(null));

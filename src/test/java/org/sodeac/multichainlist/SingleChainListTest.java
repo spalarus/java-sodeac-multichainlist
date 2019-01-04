@@ -39,9 +39,9 @@ public class SingleChainListTest
 	public void test00002WithPartition() throws Exception
 	{
 		SingleChainList<String> list = new SingleChainList<>("first","second","third");
-		list.linkerForPartition("third").appendAll("4","5");
-		list.linkerForPartition("first").appendAll("1","2");
-		list.linkerForPartition("second").append("3");
+		list.cachedLinker("third").appendAll("4","5");
+		list.cachedLinker("first").appendAll("1","2");
+		list.cachedLinker("second").append("3");
 		
 		assertEquals("list size should be correct", 5, list.getSize());
 		Snapshot<String> s = list.createImmutableSnapshot();

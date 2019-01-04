@@ -32,36 +32,6 @@ import org.sodeac.multichainlist.Node.Link;
 import org.sodeac.multichainlist.Partition.Eyebolt;
 
 /**
- * First: MultiChainList <b>!!!NOT!!!</b> implements {@link java.util.List}. 
- * 
- * <p>
- * <ul>
- * <li>modify: add elements to begin or end of list (or partition)</li>
- * <li>read: create an immutable snapshot and iterate through elements</li>
- * <li>optional organisation: organize  elements in multiple chains</li>
- * <li>optional partitioning: divide list in multiple partitions</li>
- * </ul>
- * 
- * <p>By default a multichainlist consists of one single partition (partition NULL). 
- * Append or prepend an element to partition means to append or prepend this to begin or end of hole list. 
- * Optionally a multichainlist consists of multiple partitions. 
- * In this case append or prepend an element to partition can add the item in the middle of a list, 
- * if selected partition is in the middle of the list. 
- * Partitions are ordered by creation order and once created a partition can not remove anymore.
- * 
- * <p>By default a multichainlist consists of one single chain (chain NULL). 
- * A chain manages the member elements and their order. 
- * Each inserted element is containerized by one {@link Node}. 
- * A node can link the element with various chains, but only once for a chain and with the specification of a partition. 
- * A {@link LinkageDefinition} describes the combination of partition and chain.
- * If an element is added to the list several times, a new node is created each time.
- * 
- * To modify a multichainlist prepend or append elements to one or many chains. Afterwards the membership to chains can modified with {@link Node}-object. 
- * Removing an element from list can be reached by remove corresponding node from all chains.
- * 
- * Read access can only be enabled by creating a {@link Snapshot}. 
- * Snapshots are immutable {@link Collection}s, any modifications on multichainlist after the creation of the snapshot are not visible inside.
- * 
  * 
  * @author Sebastian Palarus
  * @since 1.0
@@ -80,7 +50,7 @@ public class MultiChainList<E>
 	{
 		super();
 		
-		if(partitionNames.length == 0)
+		if((partitionNames == null) || (partitionNames.length == 0))
 		{
 			partitionNames = new String[] {null};
 		}
@@ -89,25 +59,12 @@ public class MultiChainList<E>
 		this.readLock = this.lock.readLock();
 		this.writeLock = this.lock.writeLock();
 		this.partitionList = new HashMap<String, Partition<E>>();
-		for(String partitionName : partitionNames)
-		{
-			if(partitionList.containsKey(partitionName))
-			{
-				continue;
-			}
-			Partition<E> partition = new Partition<E>(partitionName,this);
-			this.partitionList.put(partitionName, partition);
-			if(this.firstPartition == null)
-			{
-				this.firstPartition = partition;
-			}
-			lastPartition = partition;
-		}
+		this.definePartitions(partitionNames);
 		this.modificationVersion = new SnapshotVersion<E>(this,0L);
 		this.obsoleteList = new LinkedList<Link<E>>();
 		this.openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
 		this.nodeSize = 0L;
-		this.defaultLinker = LinkerBuilder.newBuilder().inPartition(this.lastPartition.getName()).linkIntoChain(null).buildLinker(this);
+		this.defaultLinker = LinkerBuilder.newBuilder().inPartition(this.lastPartition.getName()).linkIntoChain(null).build(this);
 	}
 	
 	protected ReentrantReadWriteLock lock;
@@ -131,6 +88,7 @@ public class MultiChainList<E>
 	protected volatile boolean lockDefaultLinker = false;
 	protected volatile Linker<E> defaultLinker =  null;
 	protected Map<String,Map<String,Chain<E>>> cachedChains = null;
+	protected Map<String,CachedLinkerNode<E>> cachedLinkerNodes = null; 
 	
 	private UUID uuid = null;
 	
@@ -171,7 +129,7 @@ public class MultiChainList<E>
 		{
 			throw new RuntimeException("default linker is locked");
 		}
-		this.defaultLinker = linkerBuilder.buildLinker(this);
+		this.defaultLinker = linkerBuilder.build(this);
 	}
 	
 	public MultiChainList<E> lockDefaultLinker()
@@ -433,6 +391,36 @@ public class MultiChainList<E>
 		return new Chain<E>(this, chainName, partitions);
 	}
 	
+	public CachedLinkerBuilder cachedLinkerBuilder()
+	{
+		readLock.lock();
+		try
+		{
+			if(this.cachedLinkerNodes != null)
+			{
+				return new CachedLinkerBuilder();
+			}
+		}
+		finally 
+		{
+			readLock.unlock();
+		}
+		
+		writeLock.lock();
+		try
+		{
+			if(this.cachedLinkerNodes == null)
+			{
+				this.cachedLinkerNodes = new HashMap<String,CachedLinkerNode<E>>();
+			}
+			return new CachedLinkerBuilder();		
+		}
+		finally 
+		{
+			writeLock.unlock();
+		}
+	}
+	
 	public Chain<E> cachedChain(String chainName, String defaultPartitionName)
 	{
 		readLock.lock();
@@ -623,7 +611,14 @@ public class MultiChainList<E>
 				this.partitionListCopy = null;
 				
 				partition = new Partition<E>(partitionName,this);
-				this.lastPartition.next = partition;
+				if(firstPartition == null)
+				{
+					this.firstPartition = partition;
+				}
+				if(this.lastPartition != null)
+				{
+					this.lastPartition.next = partition;
+				}
 				partition.previews = this.lastPartition;
 				partitionList.put(partitionName, partition);
 				
@@ -825,16 +820,327 @@ public class MultiChainList<E>
 		}
 	}
 	
+	private static class CachedLinkerNode<E>
+	{
+		private enum Mode {InPartition,IntoChain};
+		
+		private volatile Mode mode = null;
+		private volatile String name = null;
+		private volatile Map<String,CachedLinkerNode<E>> childs = null;
+		private volatile Linker<E> linker = null;
+		
+		private void clear(boolean disposeLinker)
+		{
+			try
+			{
+				if(childs != null)
+				{
+					for(CachedLinkerNode<E> child : childs.values())
+					{
+						child.clear(disposeLinker);
+					}
+					childs.clear();
+				}
+				if((disposeLinker) && (linker != null))
+				{
+					linker.dispose();
+				}
+			}
+			catch (Exception e) 
+			{
+				e.printStackTrace();
+			}
+			
+			this.mode = null;
+			this.name = null;
+			this.childs = null;
+			this.linker = null;
+		}
+	}
+	
+	public class CachedLinkerBuilder
+	{
+		private LinkedList<CachedLinkerNode<E>> stack = new LinkedList<CachedLinkerNode<E>>();
+		private boolean complete = false;
+		
+		private CachedLinkerBuilder()
+		{
+			super();
+		}
+		
+		public CachedLinkerBuilder inPartition(String partitionName)
+		{
+			this.testComplete();
+			
+			MultiChainList.this.readLock.lock();
+			try
+			{
+				if(stack.isEmpty())
+				{
+					CachedLinkerNode<E> cachedNode = MultiChainList.this.cachedLinkerNodes.get(CachedLinkerNode.Mode.InPartition + "_" + partitionName);
+					if(cachedNode != null)
+					{
+						this.stack.addLast(cachedNode);
+						return this;
+					}
+				}
+				else
+				{
+					if(stack.getLast().childs != null)
+					{
+						CachedLinkerNode<E> cachedNode = stack.getLast().childs.get(CachedLinkerNode.Mode.InPartition + "_" + partitionName);
+						if(cachedNode != null)
+						{
+							this.stack.addLast(cachedNode);
+							return this;
+						}
+					}
+				}
+			}
+			finally 
+			{
+				MultiChainList.this.readLock.unlock();
+			}
+			
+			MultiChainList.this.writeLock.lock();
+			try
+			{
+				if(stack.isEmpty())
+				{
+					CachedLinkerNode<E> cachedNode = MultiChainList.this.cachedLinkerNodes.get(CachedLinkerNode.Mode.InPartition + "_" + partitionName);
+					if(cachedNode != null)
+					{
+						this.stack.addLast(cachedNode);
+						return this;
+					}
+					cachedNode = new CachedLinkerNode<E>();
+					cachedNode.mode = CachedLinkerNode.Mode.InPartition;
+					cachedNode.name = partitionName;
+					MultiChainList.this.cachedLinkerNodes.put(CachedLinkerNode.Mode.InPartition + "_" + partitionName, cachedNode);
+					this.stack.addLast(cachedNode);
+					return this;
+				}
+				else
+				{
+					if(stack.getLast().childs == null)
+					{
+						stack.getLast().childs = new HashMap<String,CachedLinkerNode<E>>();
+					}
+					CachedLinkerNode<E> cachedNode = stack.getLast().childs.get(CachedLinkerNode.Mode.InPartition + "_" + partitionName);
+					if(cachedNode != null)
+					{
+						this.stack.addLast(cachedNode);
+						return this;
+					}
+					cachedNode = new CachedLinkerNode<E>();
+					cachedNode.mode = CachedLinkerNode.Mode.InPartition;
+					cachedNode.name = partitionName;
+					stack.getLast().childs.put(CachedLinkerNode.Mode.InPartition + "_" + partitionName, cachedNode);
+					this.stack.addLast(cachedNode);
+					return this;
+				}
+			}
+			finally 
+			{
+				MultiChainList.this.writeLock.unlock();
+			}
+		}
+		
+		public CachedLinkerBuilder linkIntoChain(String chainName)
+		{
+			this.testComplete();
+			
+			MultiChainList.this.readLock.lock();
+			try
+			{
+				if(stack.isEmpty())
+				{
+					CachedLinkerNode<E> cachedNode = MultiChainList.this.cachedLinkerNodes.get(CachedLinkerNode.Mode.IntoChain + "_" + chainName);
+					if(cachedNode != null)
+					{
+						this.stack.addLast(cachedNode);
+						return this;
+					}
+				}
+				else
+				{
+					if(stack.getLast().childs != null)
+					{
+						CachedLinkerNode<E> cachedNode = stack.getLast().childs.get(CachedLinkerNode.Mode.IntoChain + "_" + chainName);
+						if(cachedNode != null)
+						{
+							this.stack.addLast(cachedNode);
+							return this;
+						}
+					}
+				}
+			}
+			finally 
+			{
+				MultiChainList.this.readLock.unlock();
+			}
+			
+			MultiChainList.this.writeLock.lock();
+			try
+			{
+				if(stack.isEmpty())
+				{
+					CachedLinkerNode<E> cachedNode = MultiChainList.this.cachedLinkerNodes.get(CachedLinkerNode.Mode.IntoChain + "_" + chainName);
+					if(cachedNode != null)
+					{
+						this.stack.addLast(cachedNode);
+						return this;
+					}
+					cachedNode = new CachedLinkerNode<E>();
+					cachedNode.mode = CachedLinkerNode.Mode.IntoChain;
+					cachedNode.name = chainName;
+					MultiChainList.this.cachedLinkerNodes.put(CachedLinkerNode.Mode.IntoChain + "_" + chainName, cachedNode);
+					this.stack.addLast(cachedNode);
+					return this;
+				}
+				else
+				{
+					if(stack.getLast().childs == null)
+					{
+						stack.getLast().childs = new HashMap<String,CachedLinkerNode<E>>();
+					}
+					CachedLinkerNode<E> cachedNode = stack.getLast().childs.get(CachedLinkerNode.Mode.IntoChain + "_" + chainName);
+					if(cachedNode != null)
+					{
+						this.stack.addLast(cachedNode);
+						return this;
+					}
+					cachedNode = new CachedLinkerNode<E>();
+					cachedNode.mode = CachedLinkerNode.Mode.IntoChain;
+					cachedNode.name = chainName;
+					stack.getLast().childs.put(CachedLinkerNode.Mode.IntoChain + "_" + chainName, cachedNode);
+					this.stack.addLast(cachedNode);
+					return this;
+				}
+			}
+			finally 
+			{
+				MultiChainList.this.writeLock.unlock();
+			}
+		}
+		
+		private void testComplete()
+		{
+			if(complete)
+			{
+				throw new RuntimeException("builder is completed");
+			}
+		}
+		
+		public CachedLinkerBuilder complete()
+		{
+			this.complete = true;
+			return this;
+		}
+		
+		public Linker<E> build()
+		{
+			if(stack.isEmpty())
+			{
+				throw new RuntimeException("builder is empty");
+			}
+			
+			if(stack.getLast().linker != null)
+			{
+				return stack.getLast().linker;
+			}
+			
+			LinkerBuilder builder = LinkerBuilder.newBuilder();
+			for(CachedLinkerNode<E> node : stack)
+			{
+				if(node.mode == CachedLinkerNode.Mode.InPartition)
+				{
+					builder.inPartition(node.name);
+				}
+				
+				if(node.mode == CachedLinkerNode.Mode.IntoChain)
+				{
+					builder.linkIntoChain(node.name);
+				}
+			}
+			Linker<E> linker = builder.build(MultiChainList.this);
+			// linker.getLinkageDefinitionContainer(); // check partitions exist
+			stack.getLast().linker = linker;
+			builder.dispose();
+			stack.clear();
+			return linker;
+		}
+		
+		public Node<E> append(E element)
+		{
+			return build().append(element);
+		}
+		
+		@SafeVarargs
+		public final Node<E>[] appendAll(E... elements)
+		{
+			return build().appendAll(elements);
+		}
+		
+		public Node<E>[] appendAll(Collection<E> elements)
+		{
+			return build().appendAll(elements);
+		}
+		
+		public Node<E> prepend(E element)
+		{
+			return build().prepend(element);
+		}
+		
+		@SafeVarargs
+		public final Node<E>[] prependAll(E... elements)
+		{
+			return build().prependAll(elements);
+		}
+		
+		public Node<E>[] prependAll(Collection<E> elements)
+		{
+			return build().prependAll(elements);
+		}
+	}
+	
 	public void dispose()
 	{
 		writeLock.lock();
 		try
 		{
+			if(registeredChainEventHandlerList != null)
+			{
+				try {registeredChainEventHandlerList.clear();}catch (Exception e) {}
+				registeredChainEventHandlerList = null;
+			}
+			
+			if(registeredEventHandlerList != null)
+			{
+				try {registeredEventHandlerList.clear();}catch (Exception e) {}
+				registeredEventHandlerList = null;
+			}
+			
 			if(! this.openSnapshotVersionList.isEmpty())
 			{
 				while(! this.openSnapshotVersionList.isEmpty())
 				{
 					this.removeSnapshotVersion(this.openSnapshotVersionList.iterator().next());
+				}
+			}
+			
+			if(this.cachedLinkerNodes != null)
+			{
+				for(CachedLinkerNode<E> rootNodes : cachedLinkerNodes.values())
+				{
+					try
+					{
+						rootNodes.clear(true);
+					}
+					catch (Exception e) 
+					{
+						e.printStackTrace();
+					}
 				}
 			}
 			Eyebolt<E> eyebolt;
@@ -929,24 +1235,6 @@ public class MultiChainList<E>
 			openSnapshotVersionList = null;
 			firstPartition = null;
 			lastPartition = null;
-			
-			if(registeredChainEventHandlerList != null)
-			{
-				try {registeredChainEventHandlerList.clear();}catch (Exception e) {}
-				registeredChainEventHandlerList = null;
-			}
-			
-			if(registeredEventHandlerList != null)
-			{
-				try {registeredEventHandlerList.clear();}catch (Exception e) {}
-				registeredEventHandlerList = null;
-			}
-			
-			if(registeredEventHandlerList != null)
-			{
-				try {registeredEventHandlerList.clear();}catch (Exception e) {}
-				registeredEventHandlerList = null;
-			}
 			
 			if(cachedChains != null)
 			{
