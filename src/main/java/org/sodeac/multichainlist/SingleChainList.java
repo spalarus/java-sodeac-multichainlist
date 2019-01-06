@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.sodeac.multichainlist;
 
-public class SingleChainList<E> extends Chain<E>
+public class SingleChainList<E> extends ChainView<E>
 {
 	public SingleChainList()
 	{

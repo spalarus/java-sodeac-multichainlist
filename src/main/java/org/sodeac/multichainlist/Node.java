@@ -30,7 +30,7 @@ import org.sodeac.multichainlist.Partition.LinkMode;
  * @since 1.0
  * @version 1.0
  *
- * @param <E>
+ * @param <E> the type of elements in this list
  */
 public class Node<E>
 {
@@ -47,6 +47,11 @@ public class Node<E>
 	protected volatile long lastObsoleteOnVersion = Link.NO_OBSOLETE;
 	private volatile int linkSize = 0;
 	
+	/**
+	 * create a list for all linkage definitions of node
+	 * 
+	 * @return
+	 */
 	@SuppressWarnings("unchecked")
 	public final LinkageDefinition<E>[] getLinkageDefinitions()
 	{
@@ -82,6 +87,12 @@ public class Node<E>
 		
 	}
 	
+	/**
+	 * checks if node is linked with specified chain
+	 * 
+	 * @param chainName name of chain
+	 * @return true, if node is linked with specified chain, otherwise false
+	 */
 	public final LinkageDefinition<E> isLink(String chainName)
 	{
 		if(! isPayload())
@@ -112,7 +123,10 @@ public class Node<E>
 		
 	}
 	
-	protected void clear()
+	/**
+	 * helps gc
+	 */
+	protected void dispose()
 	{
 		if(multiChainList != null)
 		{
@@ -123,7 +137,7 @@ public class Node<E>
 				{
 					try
 					{
-						eventHandler.onClearNode(this.multiChainList,element);
+						eventHandler.onDisposeNode(this.multiChainList,element);
 					}
 					catch (Exception e) {}
 					catch (Error e) {}
@@ -144,7 +158,14 @@ public class Node<E>
 		headsOfAdditionalChains = null;
 	}
 	
-		
+	/**
+	 * Links the node to another chain in specified partition. 
+	 * Current links are retained. The the node must not already linked to specified chain.
+	 * 	
+	 * @param chainName name of chain
+	 * @param partition partition
+	 * @param linkMode append to the end of partition or prepend to the begin of partition
+	 */
 	public void linkTo(String chainName, Partition<E> partition, Partition.LinkMode linkMode)
 	{
 		if(! isPayload())
@@ -156,7 +177,7 @@ public class Node<E>
 		{
 			throw new RuntimeException("partition not member of list");
 		}
-		multiChainList.getWriteLock().lock();
+		multiChainList.writeLock.lock();
 		try
 		{
 			SnapshotVersion<E> currentVersion = multiChainList.getModificationVersion();
@@ -171,83 +192,123 @@ public class Node<E>
 		}
 		finally 
 		{
-			multiChainList.getWriteLock().unlock();
+			multiChainList.writeLock.unlock();
 		}
 	}
 	
-	public void moveTo(String fromChain, LinkageDefinition<E> linkageDefinition, Partition.LinkMode linkMode)
+	/**
+	 * Move the link from one chain to another chain in specified partition.
+	 *   
+	 * @param fromChain name of chain of source chain
+	 * @param toChain name of chain of destination chain
+	 * @param toPartition name of partition of destination chain
+	 * @param linkMode append to the end of partition or prepend to the begin of partition
+	 */
+	public void moveTo(String fromChain, String toChain, Partition<E> toPartition, Partition.LinkMode linkMode)
 	{
-		Objects.requireNonNull(linkageDefinition, "linkagedefinition not set");
-		Partition<E> partition = 
-			linkageDefinition.getPartition().multiChainList == this.multiChainList ?
-				linkageDefinition.getPartition() :
-				multiChainList.getPartition(linkageDefinition.getPartition().getName());
-				
-		Objects.requireNonNull(partition);
-		multiChainList.getWriteLock().lock();
+		if
+		(
+			((fromChain == null) && (toChain == null)) ||
+			((fromChain != null) && fromChain.equals(toChain))
+		)
+		{
+			throw new RuntimeException("from == to");
+		}
+		
+		if(toPartition == null)
+		{
+			toPartition = multiChainList.getPartition(null);
+		}
+		
+		multiChainList.writeLock.lock();
 		try
 		{
-			String toChain = linkageDefinition.getChainName();
+			Partition<E> partition = 
+					toPartition.multiChainList == this.multiChainList ?
+							toPartition :
+					multiChainList.partitionList.get(toPartition.getName());
+			
+			Objects.requireNonNull(partition);
+			
 			Link<E> source = getLink(fromChain);
+			
+			Link<E> destination = getLink(toChain);
+			if(destination != null)
+			{
+				if(source == null)
+				{
+					linkTo(multiChainList.uuid.toString(), partition , linkMode);
+					source = getLink(multiChainList.uuid.toString());
+				}
+				unlink(destination, false);
+			}
+			
+			linkTo(toChain, partition , linkMode);
 			
 			if(source != null)
 			{
 				unlink(source, false);
 			}
-			
-			Link<E> destination = getLink(toChain);
-			if(destination != null)
-			{
-				unlink(destination, false);
-			}
-			
-			linkTo(toChain, linkageDefinition.getPartition() , linkMode);
 		}
 		finally 
 		{
-			multiChainList.getWriteLock().unlock();
+			multiChainList.writeLock.unlock();
 		}
 	}
 	
-	public final void unlinkAllChains()
+	/**
+	 * Remove all links. As a result the node will dispose. 
+	 */
+	public final void unlinkFromAllChains()
 	{
 		if(! isPayload())
 		{
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
-		multiChainList.getWriteLock().lock();
+		multiChainList.writeLock.lock();
 		try
 		{
 			if(this.headOfDefaultChain != null)
 			{
-				unlink(this.headOfDefaultChain.linkageDefinition.getChainName());
+				unlinkFromChain(this.headOfDefaultChain.linkageDefinition.getChainName());
 			}
 			if(headsOfAdditionalChains != null)
 			{
 				for(Link<E> link : headsOfAdditionalChains.values())
 				{
-					unlink(link.linkageDefinition.getChainName());
+					unlinkFromChain(link.linkageDefinition.getChainName());
 				}
 			}
 		}
 		finally 
 		{
-			multiChainList.getWriteLock().unlock();
+			multiChainList.writeLock.unlock();
 		}
 	}
 	
+	/**
+	 * Getter for size of links to various chains.
+	 * 
+	 * @return size of links to various chains
+	 */
 	public final int linkSize()
 	{
 		return linkSize;
 	}
 	
-	public final boolean unlink(String chainName)
+	/**
+	 * Unlink node from specified chain.
+	 * 
+	 * @param chainName name of chain
+	 * @return true, if node was linked to chain, otherwise false
+	 */
+	public final boolean unlinkFromChain(String chainName)
 	{
 		if(! isPayload())
 		{
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
-		WriteLock writeLock = multiChainList.getWriteLock();
+		WriteLock writeLock = multiChainList.writeLock;
 		writeLock.lock();
 		try
 		{
@@ -265,6 +326,13 @@ public class Node<E>
 		
 	}
 	
+	/**
+	 * Internal helper method to unlink node from chian
+	 * 
+	 * @param link link
+	 * @param nodeClear dispose node after node is unlinked from all chains
+	 * @return true, if node was linked to chain, otherwise false
+	 */
 	private final boolean unlink(Link<E> link, boolean nodeClear)
 	{
 		if(! isPayload())
@@ -362,6 +430,12 @@ public class Node<E>
 		return true;
 	}
 	
+	/**
+	 * Internal helper method to get link object of node for specified chain
+	 * 
+	 * @param chainName name of chain
+	 * @return link object or null
+	 */
 	protected Link<E> getLink(String chainName)
 	{
 		if(chainName == null)
@@ -375,11 +449,27 @@ public class Node<E>
 		return headsOfAdditionalChains.get(chainName);
 	}
 	
+	/**
+	 * Internal helper method to create new link version
+	 * 
+	 * @param linkageDefinition linkage definition
+	 * @param currentVersion current version of list
+	 * @param linkMode append or prepend
+	 * @return new link
+	 */
 	protected Link<E> createHead(LinkageDefinition<E> linkageDefinition,SnapshotVersion<E> currentVersion, Partition.LinkMode linkMode)
 	{
 		return setHead(linkageDefinition.getChainName(),new Link<>(linkageDefinition, this, currentVersion),linkMode);
 	}
 	
+	/**
+	 * Internal helper method to set new link as head
+	 * 
+	 * @param chainName name of chain
+	 * @param link new link
+	 * @param linkMode append or prepend
+	 * @return new link
+	 */
 	protected Link<E> setHead(String chainName, Link<E> link, Partition.LinkMode linkMode)
 	{
 		boolean startsWithEmptyState = linkSize ==  0;
@@ -516,12 +606,21 @@ public class Node<E>
 		}
 	}
 	
-	
+	/**
+	 * Getter for element (payload of node)
+	 * 
+	 * @return element
+	 */
 	public E getElement()
 	{
 		return element;
 	}
 
+	/**
+	 * Internal method.
+	 * 
+	 * @return node contains element as payload
+	 */
 	protected boolean isPayload()
 	{
 		return true;
@@ -534,7 +633,7 @@ public class Node<E>
 	}
 	
 	/**
-	 * Intern helper class link the elements / nodes between themselves
+	 * Internal helper class link the elements / nodes between themselves
 	 * 
 	 * @author Sebastian Palarus
 	 *
@@ -603,7 +702,7 @@ public class Node<E>
 			{
 				return false;
 			}
-			return node.unlink(linkage.getChainName());
+			return node.unlinkFromChain(linkage.getChainName());
 		}
 
 		protected void clear()
@@ -617,7 +716,7 @@ public class Node<E>
 			{
 				if(nodeClear && (this.node.linkSize == 0) && (this.node.lastObsoleteOnVersion == this.obsoleteOnVersion))
 				{
-					this.node.clear();
+					this.node.dispose();
 				}
 			}
 			this.linkageDefinition = null;

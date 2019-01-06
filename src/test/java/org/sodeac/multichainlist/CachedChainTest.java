@@ -24,20 +24,19 @@ public class CachedChainTest
 	public void test00001CachedChainTest1() throws Exception
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<>();
-		multiChainList.definePartition("1");
-		multiChainList.definePartition("2");
+		multiChainList.definePartitions("1","2");
 		
-		Chain<String> chain_NULL_NULL__1 = multiChainList.cachedChain(null, null);
-		Chain<String> chain_NULL_1__1 = multiChainList.cachedChain(null, "1");
-		Chain<String> chain_NULL_2__1 = multiChainList.cachedChain(null, "2");
+		ChainView<String> chain_NULL_NULL__1 = multiChainList.cachedChainView(null, null);
+		ChainView<String> chain_NULL_1__1 = multiChainList.cachedChainView(null, "1");
+		ChainView<String> chain_NULL_2__1 = multiChainList.cachedChainView(null, "2");
 		
-		Chain<String> chain_A_NULL__1 = multiChainList.cachedChain("A", null);
-		Chain<String> chain_A_1__1 = multiChainList.cachedChain("A", "1");
-		Chain<String> chain_A_2__1 = multiChainList.cachedChain("A", "2");
+		ChainView<String> chain_A_NULL__1 = multiChainList.cachedChainView("A", null);
+		ChainView<String> chain_A_1__1 = multiChainList.cachedChainView("A", "1");
+		ChainView<String> chain_A_2__1 = multiChainList.cachedChainView("A", "2");
 		
-		Chain<String> chain_B_NULL__1 = multiChainList.cachedChain("B", null);
-		Chain<String> chain_B_1__1 = multiChainList.cachedChain("B", "1");
-		Chain<String> chain_B_2__1 = multiChainList.cachedChain("B", "2");
+		ChainView<String> chain_B_NULL__1 = multiChainList.cachedChainView("B", null);
+		ChainView<String> chain_B_1__1 = multiChainList.cachedChainView("B", "1");
+		ChainView<String> chain_B_2__1 = multiChainList.cachedChainView("B", "2");
 		
 		assertNotSame("chains should not be same", chain_NULL_NULL__1, chain_NULL_1__1);
 		assertNotSame("chains should not be same", chain_NULL_NULL__1, chain_NULL_2__1);
@@ -50,17 +49,17 @@ public class CachedChainTest
 		assertNotSame("chains should not be same", chain_NULL_NULL__1, chain_B_1__1);
 		assertNotSame("chains should not be same", chain_NULL_NULL__1, chain_B_2__1);
 		
-		Chain<String> chain_NULL_NULL__2 = multiChainList.cachedChain(null, null);
-		Chain<String> chain_NULL_1__2 = multiChainList.cachedChain(null, "1");
-		Chain<String> chain_NULL_2__2 = multiChainList.cachedChain(null, "2");
+		ChainView<String> chain_NULL_NULL__2 = multiChainList.cachedChainView(null, null);
+		ChainView<String> chain_NULL_1__2 = multiChainList.cachedChainView(null, "1");
+		ChainView<String> chain_NULL_2__2 = multiChainList.cachedChainView(null, "2");
 		
-		Chain<String> chain_A_NULL__2 = multiChainList.cachedChain("A", null);
-		Chain<String> chain_A_1__2 = multiChainList.cachedChain("A", "1");
-		Chain<String> chain_A_2__2 = multiChainList.cachedChain("A", "2");
+		ChainView<String> chain_A_NULL__2 = multiChainList.cachedChainView("A", null);
+		ChainView<String> chain_A_1__2 = multiChainList.cachedChainView("A", "1");
+		ChainView<String> chain_A_2__2 = multiChainList.cachedChainView("A", "2");
 		
-		Chain<String> chain_B_NULL__2 = multiChainList.cachedChain("B", null);
-		Chain<String> chain_B_1__2 = multiChainList.cachedChain("B", "1");
-		Chain<String> chain_B_2__2 = multiChainList.cachedChain("B", "2");
+		ChainView<String> chain_B_NULL__2 = multiChainList.cachedChainView("B", null);
+		ChainView<String> chain_B_1__2 = multiChainList.cachedChainView("B", "1");
+		ChainView<String> chain_B_2__2 = multiChainList.cachedChainView("B", "2");
 		
 		assertSame("chains should not be same", chain_NULL_NULL__1,chain_NULL_NULL__2);
 		assertSame("chains should not be same", chain_NULL_1__1, chain_NULL_1__2);

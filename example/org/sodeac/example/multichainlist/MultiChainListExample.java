@@ -42,7 +42,7 @@ public class MultiChainListExample
 		
 		new Thread(() -> 
 		{ 
-			try(Snapshot<Task> tasksAlice = tasks.chain(ALICE).createImmutableSnapshot())
+			try(Snapshot<Task> tasksAlice = tasks.createChainView(ALICE).createImmutableSnapshot())
 			{
 				tasksAlice.forEach( t -> { t.takeOverTask().runBy(ALICE);});
 			}
@@ -51,7 +51,7 @@ public class MultiChainListExample
 		
 		new Thread(() -> 
 		{ 
-			try(Snapshot<Task> tasksAlice = tasks.chain(BOB).createImmutableSnapshot())
+			try(Snapshot<Task> tasksAlice = tasks.createChainView(BOB).createImmutableSnapshot())
 			{
 				tasksAlice.forEach( t -> { t.takeOverTask().runBy(BOB);});
 			}

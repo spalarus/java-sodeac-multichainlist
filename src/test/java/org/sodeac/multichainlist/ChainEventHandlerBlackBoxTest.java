@@ -73,7 +73,7 @@ public class ChainEventHandlerBlackBoxTest
 		
 		assertEquals("linkSize should be correct", 2, node1.linkSize());
 		
-		node1.unlink("chain1");
+		node1.unlinkFromChain("chain1");
 		
 		assertEquals("container should have correct size",1, containerUnlinkNode.size());
 		assertEquals("container should have correct size",1, containerUnlinkChainName.size());
@@ -86,7 +86,7 @@ public class ChainEventHandlerBlackBoxTest
 		assertEquals("list size should be correct ", 1L, multiChainList.getNodeSize());
 		
 		
-		node1.unlink(null);
+		node1.unlinkFromChain(null);
 		
 		assertEquals("container should have correct size",1, containerUnlinkNode.size());
 		assertEquals("container should have correct size",1, containerUnlinkChainName.size());

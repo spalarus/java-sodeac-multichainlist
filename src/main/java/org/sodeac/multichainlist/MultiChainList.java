@@ -20,7 +20,6 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -32,6 +31,7 @@ import org.sodeac.multichainlist.Node.Link;
 import org.sodeac.multichainlist.Partition.Eyebolt;
 
 /**
+ * A snapshotable, partable list with multiple chains.  
  * 
  * @author Sebastian Palarus
  * @since 1.0
@@ -41,11 +41,19 @@ import org.sodeac.multichainlist.Partition.Eyebolt;
  */
 public class MultiChainList<E>
 {
+	/**
+	 * Constructor to create a multichainlist with default partition: NULL .
+	 */
 	public  MultiChainList()
 	{
 		this(new String[]{null});
 	}
 	
+	/**
+	 * Constructor to create a multichainlist with specified partitions.
+	 * 
+	 * @param partitionNames partition names for partitions to create
+	 */
 	public  MultiChainList(String... partitionNames)
 	{
 		super();
@@ -73,7 +81,6 @@ public class MultiChainList<E>
 	
 	protected LinkedList<Link<E>> obsoleteList = null;
 	protected HashMap<String, Partition<E>>  partitionList = null;
-	protected volatile List<String> partitionNameListCopy = null;
 	protected volatile List<String> chainNameListCopy = null;
 	protected volatile List<Partition<E>> partitionListCopy = null;
 	protected SnapshotVersion<E> modificationVersion = null;
@@ -87,17 +94,15 @@ public class MultiChainList<E>
 	
 	protected volatile boolean lockDefaultLinker = false;
 	protected volatile Linker<E> defaultLinker =  null;
-	protected Map<String,Map<String,Chain<E>>> cachedChains = null;
+	protected Map<String,Map<String,ChainView<E>>> cachedChains = null;
 	protected Map<String,CachedLinkerNode<E>> cachedLinkerNodes = null; 
 	
-	private UUID uuid = null;
+	protected UUID uuid = null;
 	
 	/**
-	 * Intern helper method returns current modification version. This method must invoke with MCL.writeLock !
+	 * Internal helper method returns current modification version. This method must invoke with MCL.writeLock !
 	 * 
 	 * <br> Current modification version must be higher than current snapshot version.
-	 * 
-	 * <p>Note: This is intern 
 	 * 
 	 * @return
 	 */
@@ -118,11 +123,21 @@ public class MultiChainList<E>
 		return modificationVersion;
 	}
 
+	/**
+	 * Get default linker. If not explicitly defined with {@link MultiChainList#buildDefaultLinker(LinkerBuilder)}, the default linker adds new elements in last partition of chain NULL.
+	 * 
+	 * @return default linker
+	 */
 	public Linker<E> defaultLinker()
 	{
 		return defaultLinker;
 	}
 
+	/**
+	 * Builds new default linker with specified linker builder
+	 * 
+	 * @param linkerBuilder linker builder tu build new default builder
+	 */
 	public void buildDefaultLinker(LinkerBuilder linkerBuilder)
 	{
 		if(lockDefaultLinker)
@@ -132,6 +147,11 @@ public class MultiChainList<E>
 		this.defaultLinker = linkerBuilder.build(this);
 	}
 	
+	/**
+	 * Prevents replacing the current default builder
+	 * 
+	 * @return this multichainlist
+	 */
 	public MultiChainList<E> lockDefaultLinker()
 	{
 		this.lockDefaultLinker = true;
@@ -148,8 +168,19 @@ public class MultiChainList<E>
 		return nodeSize;
 	}
 	
+	/**
+	 * Returns partitions size
+	 * 
+	 * @return partitions size
+	 */
 	public int getPartitionSize()
 	{
+		List<Partition<E>> partitionList = this.partitionListCopy;
+		if(partitionList != null)
+		{
+			return partitionList.size();
+		}
+		
 		readLock.lock();
 		try
 		{
@@ -161,6 +192,11 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * Collect all chains returns the chain name as immutable list
+	 * 
+	 * @return list of chain names
+	 */
 	public List<String> getChainNameList()
 	{
 		List<String> chainNameList = this.chainNameListCopy;
@@ -192,34 +228,11 @@ public class MultiChainList<E>
 		}
 	}
 	
-	public List<String> getPartitionNameList()
-	{
-		List<String> partitionList = this.partitionNameListCopy;
-		if(partitionList != null)
-		{
-			return partitionList;
-		}
-		readLock.lock();
-		try
-		{
-			if(this.partitionNameListCopy != null)
-			{
-				return this.partitionNameListCopy;
-			}
-			List<String> list = new ArrayList<>(this.partitionList.size());
-			for(String partitionName : this.partitionList.keySet())
-			{
-				list.add(partitionName);
-			}
-			this.partitionNameListCopy = Collections.unmodifiableList(list);
-			return this.partitionNameListCopy;
-		}
-		finally
-		{
-			readLock.unlock();
-		}
-	}
-	
+	/**
+	 * Returns immutable list with partitions
+	 * 
+	 * @return immutable list with partitions
+	 */
 	public List<Partition<E>> getPartitionList()
 	{
 		List<Partition<E>> partitionList = this.partitionListCopy;
@@ -248,6 +261,13 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * Return partition with specified name
+	 * 
+	 * @param partitionName name of partition
+	 * 
+	 * @return partition with specified name
+	 */
 	public Partition<E> getPartition(String partitionName)
 	{
 		readLock.lock();
@@ -261,6 +281,11 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * register chain event handler
+	 * 
+	 * @param eventHandler event handler to register
+	 */
 	public void registerChainEventHandler(IChainEventHandler<E> eventHandler)
 	{
 		if(eventHandler == null)
@@ -286,6 +311,12 @@ public class MultiChainList<E>
 			writeLock.unlock();
 		}
 	}
+	
+	/**
+	 * unregister chain event handler 
+	 * 
+	 * @param eventHandler eventHandler event handler to unregister
+	 */
 	public void unregisterChainEventHandler(IChainEventHandler<E> eventHandler)
 	{
 		if(eventHandler == null)
@@ -309,6 +340,11 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * register list event handler
+	 * 
+	 * @param eventHandler event handler to register
+	 */
 	public void registerListEventHandler(IListEventHandler<E> eventHandler)
 	{
 		if(eventHandler == null)
@@ -337,6 +373,11 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * unregister list event handler 
+	 * 
+	 * @param eventHandler event handler to unregister
+	 */
 	public void unregisterListEventHandler(IListEventHandler<E> eventHandler)
 	{
 		if(eventHandler == null)
@@ -363,34 +404,30 @@ public class MultiChainList<E>
 	}
 	
 	/**
-	 * get Chain with all Partitions
+	 * Creates a new chain view 
 	 * 
-	 * @param chainName
-	 * @return
+	 * <p>View covers only partitions specified in {@code partitionFilter} . If no partition is specified in filter, view covers all partitions. 
+	 * 
+	 * @param chainName chainName
+	 * @param partitionFilter optional partition filter
+	 * 
+	 * @return created chain view
 	 */
-	public Chain<E> chain( String chainName)
+	@SafeVarargs
+	public final ChainView<E> createChainView( String chainName, Partition<E>... partitionFilter)
 	{
-		return new Chain<E>(this, chainName, null);
+		if(partitionFilter.length == 0)
+		{
+			partitionFilter = null;
+		}
+		return new ChainView<E>(this, chainName, partitionFilter);
 	}
 	
 	/**
-	 * get Chain with  defined partitions
+	 * Creates new cached linker builder. This kind of linker builder reuse previously created linker, if another cached linker builder of same multichainlist was invoked with same assignments.
 	 * 
-	 * @param chainName
-	 * @param partitions
-	 * @return
+	 * @return new cached linker builder
 	 */
-	@SafeVarargs
-	public final Chain<E> chain( String chainName, Partition<E>... partitions)
-	{
-		Objects.requireNonNull(partitions);
-		if(partitions.length == 0)
-		{
-			throw new IllegalArgumentException("Partitions length == 0");
-		}
-		return new Chain<E>(this, chainName, partitions);
-	}
-	
 	public CachedLinkerBuilder cachedLinkerBuilder()
 	{
 		readLock.lock();
@@ -421,17 +458,24 @@ public class MultiChainList<E>
 		}
 	}
 	
-	public Chain<E> cachedChain(String chainName, String defaultPartitionName)
+	/**
+	 * Create or reuse chain view. 
+	 * 
+	 * @param chainName name of chain
+	 * @param partitionNameForDefaultLinker partition's name for default linker of chain view
+	 * @return created or reused chain view
+	 */
+	public ChainView<E> cachedChainView(String chainName, String partitionNameForDefaultLinker)
 	{
 		readLock.lock();
 		try
 		{
 			if((this.cachedChains != null) && (this.cachedChains.containsKey(chainName)))
 			{
-				Map<String,Chain<E>> cachedChainsCluster = this.cachedChains.get(chainName);
-				if((cachedChainsCluster != null) && (cachedChainsCluster.containsKey(defaultPartitionName)))
+				Map<String,ChainView<E>> cachedChainsCluster = this.cachedChains.get(chainName);
+				if((cachedChainsCluster != null) && (cachedChainsCluster.containsKey(partitionNameForDefaultLinker)))
 				{
-					return cachedChainsCluster.get(defaultPartitionName);
+					return cachedChainsCluster.get(partitionNameForDefaultLinker);
 				}
 			}
 		}
@@ -445,20 +489,20 @@ public class MultiChainList<E>
 		{
 			if(this.cachedChains == null)
 			{
-				this.cachedChains = new HashMap<String,Map<String,Chain<E>>>();
+				this.cachedChains = new HashMap<String,Map<String,ChainView<E>>>();
 			}
 			
-			Map<String,Chain<E>> cachedChainsCluster = this.cachedChains.get(chainName);
+			Map<String,ChainView<E>> cachedChainsCluster = this.cachedChains.get(chainName);
 			if(cachedChainsCluster == null)
 			{
-				cachedChainsCluster = new HashMap<String,Chain<E>>();
+				cachedChainsCluster = new HashMap<String,ChainView<E>>();
 				this.cachedChains.put(chainName,cachedChainsCluster);
 			}
-			Chain<E> cachedChain = cachedChainsCluster.get(defaultPartitionName);
+			ChainView<E> cachedChain = cachedChainsCluster.get(partitionNameForDefaultLinker);
 			if(cachedChain == null)
 			{
-				cachedChain = this.chain(chainName).buildDefaultLinker(defaultPartitionName).lockDefaultLinker().setLockDispose(true);
-				cachedChainsCluster.put(defaultPartitionName,cachedChain);
+				cachedChain = this.createChainView(chainName).buildDefaultLinker(partitionNameForDefaultLinker).lockDefaultLinker().setLockDispose(true);
+				cachedChainsCluster.put(partitionNameForDefaultLinker,cachedChain);
 			}
 			return cachedChain;
 		}
@@ -468,8 +512,10 @@ public class MultiChainList<E>
 		}
 	}
 	
-	/*
+	/**
+	 * Internal method to remove snapshot and clean-ups
 	 * 
+	 * @param snapshotVersion version of list
 	 */
 	protected void removeSnapshotVersion(SnapshotVersion<E> snapshotVersion)
 	{
@@ -557,30 +603,32 @@ public class MultiChainList<E>
 		}
 	}
 	
-	protected int openSnapshotVersionSize()
-	{
-		return this.openSnapshotVersionList.size();
-	}
-	
+	/**
+	 * Getter for first partition
+	 * 
+	 * @return first partition
+	 */
 	public Partition<E> getFirstPartition()
 	{
 		return firstPartition;
 	}
+	
+	/**
+	 * Getter for last partition
+	 * 
+	 * @return last partition
+	 */
 	public Partition<E> getLastPartition()
 	{
 		return lastPartition;
 	}
-	
-	protected ReadLock getReadLock()
-	{
-		return readLock;
-	}
 
-	protected WriteLock getWriteLock()
-	{
-		return writeLock;
-	}
-
+	/**
+	 * Defines partitions with specified partition names. 
+	 * 
+	 * @param partitionNames partition names
+	 * @return defined partitions
+	 */
 	public Collection<Partition<E>> definePartitions(String... partitionNames)
 	{
 		if(partitionNames == null)
@@ -607,7 +655,6 @@ public class MultiChainList<E>
 					continue;
 				}
 				
-				this.partitionNameListCopy = null;
 				this.partitionListCopy = null;
 				
 				partition = new Partition<E>(partitionName,this);
@@ -633,6 +680,13 @@ public class MultiChainList<E>
 		
 		return Collections.unmodifiableList(definedPartitionList);
 	}
+	
+	/**
+	 * Defines partition with specified name
+	 * 
+	 * @param partitionName name of partition
+	 * @return defined partition
+	 */
 	public Partition<E> definePartition(String partitionName)
 	{
 		Partition<E> partition = getPartition(partitionName);
@@ -644,7 +698,6 @@ public class MultiChainList<E>
 		writeLock.lock();
 		try
 		{
-			this.partitionNameListCopy = null;
 			this.partitionListCopy = null;
 			
 			partition = partitionList.get(partitionName);
@@ -668,8 +721,10 @@ public class MultiChainList<E>
 		}
 	}
 
-	/*
-	 * Must run in write lock !!!!
+	/**
+	 * Internal method to set link to obsolete
+	 * 
+	 * @param link link to set obsolete
 	 */
 	protected void setObsolete(Link<E> link)
 	{
@@ -683,7 +738,9 @@ public class MultiChainList<E>
 	}
 	
 	/**
-	 * Don't create new Threads !!!
+	 * Compute procedure undisturbed by concurrency updates.
+	 * 
+	 * <p>Don't create new Threads inside procedure. There is a risk of a deadlock
 	 * 
 	 * @param procedure
 	 */
@@ -715,6 +772,15 @@ public class MultiChainList<E>
 		return this == obj;	
 	}
 	
+	/**
+	 * Internal helper class tom manage versions
+	 * 
+	 * @author Sebastian Palarus
+	 * @since 1.0
+	 * @version 1.0
+	 *
+	 * @param <E> the type of elements in this list
+	 */
 	protected static class SnapshotVersion<E> implements Comparable<SnapshotVersion<E>>
 	{
 		protected SnapshotVersion(MultiChainList<E> multiChainList, long sequence)
@@ -804,12 +870,13 @@ public class MultiChainList<E>
 		}
 	}
 	
-	protected static class ChainsByPartition<E>
-	{
-		public Partition<E> partition;
-		public Map<String,LinkageDefinition<E>> chains = new HashMap<String,LinkageDefinition<E>>();
-	}
-	
+	/**
+	 * Internal helper class
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 * @param <E> the type of elements in this list
+	 */
 	protected static class ClearCompleteForwardChain<E> extends Link<E>
 	{
 		private Link<E> wrap; 
@@ -820,6 +887,13 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * Internal helper class
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 * @param <E> the type of elements in this list
+	 */
 	private static class CachedLinkerNode<E>
 	{
 		private enum Mode {InPartition,IntoChain};
@@ -858,6 +932,13 @@ public class MultiChainList<E>
 		}
 	}
 	
+	/**
+	 * Cached linker builder creates linker and reuse the linker, if another cached linker builder of same multichainlist was invoked with same assignments. 
+	 * 
+	 * @author Sebastian Palarus
+	 * @since 1.0
+	 * @version 1.0
+	 */
 	public class CachedLinkerBuilder
 	{
 		private LinkedList<CachedLinkerNode<E>> stack = new LinkedList<CachedLinkerNode<E>>();
@@ -868,6 +949,12 @@ public class MultiChainList<E>
 			super();
 		}
 		
+		/**
+		 * set or reset partition for all further assignments {@link CachedLinkerBuilder#linkIntoChain(String)}
+		 * 
+		 * @param partitionName name of partition
+		 * @return this CachedLinkerBuilder
+		 */
 		public CachedLinkerBuilder inPartition(String partitionName)
 		{
 			this.testComplete();
@@ -946,6 +1033,12 @@ public class MultiChainList<E>
 			}
 		}
 		
+		/**
+		 * Assignment to link element into specified chain 
+		 * 
+		 * @param chainName name of chain
+		 * @return this CachedLinkerBuilder
+		 */
 		public CachedLinkerBuilder linkIntoChain(String chainName)
 		{
 			this.testComplete();
@@ -1032,12 +1125,22 @@ public class MultiChainList<E>
 			}
 		}
 		
+		/**
+		 * prevents further changes 
+		 * 
+		 * @return this CachedLinkerBuilder
+		 */
 		public CachedLinkerBuilder complete()
 		{
 			this.complete = true;
 			return this;
 		}
 		
+		/**
+		 * Creates or reuses linker with previously defined assignments 
+		 * 
+		 * @return created or reused linker
+		 */
 		public Linker<E> build()
 		{
 			if(stack.isEmpty())
@@ -1071,39 +1174,78 @@ public class MultiChainList<E>
 			return linker;
 		}
 		
+		/**
+		 * Creates or reuses linker and invokes {@link Linker#append(Object)}
+		 * 
+		 * @param element element to be appended
+		 * @return container node responsible to manage appended element
+		 */
 		public Node<E> append(E element)
 		{
 			return build().append(element);
 		}
 		
+		/**
+		 * Creates or reuses linker and invokes {@link Linker#appendAll(Object...)}
+		 * 
+		 * @param elements elements to be appended
+		 * @return container nodes responsible to manage appended elements
+		 */
 		@SafeVarargs
 		public final Node<E>[] appendAll(E... elements)
 		{
 			return build().appendAll(elements);
 		}
 		
+		/**
+		 * Creates or reuses linker and invokes {@link Linker#appendAll(Collection)}
+		 * 
+		 * @param elements elements to be appended
+		 * @return container nodes responsible to manage appended elements
+		 */
 		public Node<E>[] appendAll(Collection<E> elements)
 		{
 			return build().appendAll(elements);
 		}
 		
+		/**
+		 * Creates or reuses linker and invokes {@link Linker#prepend(Object)}
+		 * 
+		 * @param element element to be prepended
+		 * @return container node responsible to manage prepended element
+		 */
 		public Node<E> prepend(E element)
 		{
 			return build().prepend(element);
 		}
 		
+		/**
+		 * Creates or reuses linker and invokes {@link Linker#prependAll(Object...)}
+		 * 
+		 * @param elements elements to be prepended
+		 * @return container nodes responsible to manage prepended elements
+		 */
 		@SafeVarargs
 		public final Node<E>[] prependAll(E... elements)
 		{
 			return build().prependAll(elements);
 		}
 		
+		/**
+		 * Creates or reuses linker and invokes {@link Linker#prependAll(Collection)}
+		 * 
+		 * @param elements elements to be prepended
+		 * @return container nodes responsible to manage prepended elements
+		 */
 		public Node<E>[] prependAll(Collection<E> elements)
 		{
 			return build().prependAll(elements);
 		}
 	}
 	
+	/**
+	 * Helps gc to clean memory. After this this list object is not usable anymore.
+	 */
 	public void dispose()
 	{
 		writeLock.lock();
@@ -1146,12 +1288,12 @@ public class MultiChainList<E>
 			Eyebolt<E> eyebolt;
 			for(Partition<E> partition : getPartitionList())
 			{
-				chain(null,partition).clear().dispose();
+				createChainView(null,partition).clear().dispose();
 				//this.clear(null,partition.name);
 				
 				for(String chainName : getChainNameList())
 				{
-					chain(chainName,partition).clear().dispose();
+					createChainView(chainName,partition).clear().dispose();
 					//this.clear(chainName,partition.name);
 					
 					if(partition.getPartitionBegin() != null)
@@ -1181,7 +1323,7 @@ public class MultiChainList<E>
 						eyebolt.clear();
 					}
 					
-					partition.getPartitionBegin().clear();
+					partition.getPartitionBegin().dispose();
 				}
 				
 				if(partition.getPartitionEnd() != null)
@@ -1212,11 +1354,6 @@ public class MultiChainList<E>
 				try{partitionList.clear();}catch (Exception e) {}
 				partitionList = null;
 			}
-			if(partitionNameListCopy != null)
-			{
-				try{partitionNameListCopy.clear();}catch (Exception e) {}
-				partitionNameListCopy = null;
-			}
 			if(partitionListCopy != null)
 			{
 				try{partitionListCopy .clear();}catch (Exception e) {}
@@ -1238,11 +1375,11 @@ public class MultiChainList<E>
 			
 			if(cachedChains != null)
 			{
-				for(Map<String,Chain<E>> cachedChainCluster : cachedChains.values())
+				for(Map<String,ChainView<E>> cachedChainCluster : cachedChains.values())
 				{
 					try
 					{
-						for(Chain<E> cachedChain : cachedChainCluster.values())
+						for(ChainView<E> cachedChain : cachedChainCluster.values())
 						{
 							try
 							{

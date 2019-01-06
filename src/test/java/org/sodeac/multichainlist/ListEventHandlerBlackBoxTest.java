@@ -51,7 +51,7 @@ public class ListEventHandlerBlackBoxTest
 			}
 			
 			@Override
-			public void onClearNode(MultiChainList<String> multiChainList, String element){}
+			public void onDisposeNode(MultiChainList<String> multiChainList, String element){}
 			
 			@Override
 			public Linker<String>.LinkageDefinitionContainer onCreateNodes(MultiChainList<String> multiChainList,Collection<String> elements, Linker<String>.LinkageDefinitionContainer linkageDefinitionContainer, LinkMode linkMode)
@@ -77,7 +77,7 @@ public class ListEventHandlerBlackBoxTest
 		
 		assertEquals("list size should be correct ", 12L, multiChainList.getNodeSize());
 		
-		Snapshot<String> snap1 = multiChainList.chain("chain1").createImmutableSnapshot();
+		Snapshot<String> snap1 = multiChainList.createChainView("chain1").createImmutableSnapshot();
 		int index=0;
 		for(String str : snap1)
 		{
@@ -88,7 +88,7 @@ public class ListEventHandlerBlackBoxTest
 		assertEquals("snapsize should be correct", 3, snap1.size());
 		snap1.close();
 		
-		Snapshot<String> snap2 = multiChainList.chain("chain2").createImmutableSnapshot();
+		Snapshot<String> snap2 = multiChainList.createChainView("chain2").createImmutableSnapshot();
 		index=0;
 		for(String str : snap2)
 		{
@@ -99,7 +99,7 @@ public class ListEventHandlerBlackBoxTest
 		assertEquals("snapsize should be correct", 3, snap2.size());
 		snap2.close();
 		
-		Snapshot<String> snap3 = multiChainList.chain("chain3").createImmutableSnapshot();
+		Snapshot<String> snap3 = multiChainList.createChainView("chain3").createImmutableSnapshot();
 		index=0;
 		for(String str : snap3)
 		{
@@ -110,7 +110,7 @@ public class ListEventHandlerBlackBoxTest
 		assertEquals("snapsize should be correct", 3, snap3.size());
 		snap3.close();
 		
-		Snapshot<String> snap4 = multiChainList.chain(null).createImmutableSnapshot();
+		Snapshot<String> snap4 = multiChainList.createChainView(null).createImmutableSnapshot();
 		index=0;
 		for(String str : snap4)
 		{

@@ -22,31 +22,50 @@ import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Node.Link;
 import org.sodeac.multichainlist.Partition.Eyebolt;
 
-public class Chain<E>
+/**
+ * A chain view provides access to an ordered collection in multichainlist.
+ * 
+ * 
+ * @author Sebastian Palarus
+ * @since 1.0
+ * @version 1.0
+ * 
+ * @param <E> the type of elements in this list
+ */
+public class ChainView<E>
 {
 	protected MultiChainList<E> multiChainList = null;
 	private String chainName = null;
-	private Partition<E>[] partitions = null;
+	private Partition<E>[] partitionFilter = null;
 	private volatile Partition<E>[] allPartitions = null;
 	private boolean anonymSnapshotChain = false;
 	private volatile Linker<E> defaultLinker =  null;
 	private volatile boolean lockDefaultLinker = false;
 	private volatile boolean lockDispose = false;
 	
-	protected Chain(MultiChainList<E> multiChainList, String chainName, Partition<E>[] partitions)
+	/**
+	 * Default constructor to create chain view from existing multichainlist.
+	 * 
+	 * <p>View covers only partitions specified in {@code partitionFilter} . If no partition is specified in filter, view covers all partitions of multichainlist.
+	 * 
+	 * @param multiChainList list
+	 * @param chainName name of chain
+	 * @param partitionFilter p
+	 */
+	protected ChainView(MultiChainList<E> multiChainList, String chainName, Partition<E>[] partitionFilter)
 	{
 		super();
 		Objects.requireNonNull(multiChainList, "parent list not set");
 		
 		this.multiChainList = multiChainList;
 		this.chainName = chainName;
-		this.partitions = partitions;
+		this.partitionFilter = partitionFilter;
 		
-		if(partitions != null)
+		if(partitionFilter != null)
 		{
-			for(int i = 0; i < partitions.length; i++)
+			for(int i = 0; i < partitionFilter.length; i++)
 			{
-				partitions[i] = multiChainList.getPartition(partitions[i].getName());
+				partitionFilter[i] = multiChainList.getPartition(partitionFilter[i].getName());
 			}
 		}
 		
@@ -59,8 +78,13 @@ public class Chain<E>
 		
 	}
 	
+	/**
+	 * Constructor to create a chain view without existing multichainlist list. 
+	 * 
+	 * @param partitionNames
+	 */
 	@SuppressWarnings("unchecked")
-	protected Chain(String[] partitionNames)
+	protected ChainView(String[] partitionNames)
 	{
 		super();
 		this.multiChainList = new MultiChainList<E>();
@@ -68,10 +92,10 @@ public class Chain<E>
 		{
 			partitionNames = new String[] {null};
 		}
-		this.partitions = new Partition[partitionNames.length];
-		for(int i = 0; i < this.partitions.length; i++)
+		this.partitionFilter = new Partition[partitionNames.length];
+		for(int i = 0; i < this.partitionFilter.length; i++)
 		{
-			partitions[i] = multiChainList.definePartition(partitionNames[i]);
+			partitionFilter[i] = multiChainList.definePartition(partitionNames[i]);
 		}
 		
 		this.chainName = null;
@@ -82,7 +106,14 @@ public class Chain<E>
 			.build(this.multiChainList);
 	}
 
-	public Chain<E> buildDefaultLinker(String partitionName)
+	/**
+	 * Builds new default linker.
+	 * 
+	 * @param partitionName name of partition
+	 * 
+	 * @return this chain view
+	 */
+	public ChainView<E> buildDefaultLinker(String partitionName)
 	{
 		if(lockDefaultLinker)
 		{
@@ -99,44 +130,63 @@ public class Chain<E>
 		return this;
 	}
 	
-	public Chain<E> lockDefaultLinker()
+	/**
+	 * Prevents replacing the current default builder
+	 * 
+	 * @return this chain view
+	 */
+	public ChainView<E> lockDefaultLinker()
 	{
 		checkDisposed();
 		this.lockDefaultLinker = true;
 		return this;
 	}
 	
+	/**
+	 * Returns default linker
+	 * 
+	 * @return default linker
+	 */
 	public Linker<E> defaultLinker()
 	{
 		checkDisposed();
 		return this.defaultLinker;
 	}
 	
+	/**
+	 * Creates or reuses a linker to link elements in this chain and specified partition
+	 * 
+	 * @param partitionName name of partition
+	 * @return created or reused a linker
+	 */
 	public Linker<E> cachedLinker(String partitionName)
 	{
 		checkDisposed();
 		return this.multiChainList.cachedLinkerBuilder().inPartition(partitionName).linkIntoChain(this.chainName).build();
 	}
 	
-	protected Chain<E> setAnonymSnapshotChain()
-	{
-		checkDisposed();
-		this.anonymSnapshotChain = true;
-		return this;
-	}
-	
-	protected Chain<E> setLockDispose(boolean lockDispose)
+	/**
+	 * Internal method to disable or enable {@link ChainView#dispose()} 
+	 * 
+	 * @param lockDispose disable or enable dispose method
+	 * @return this chain view
+	 */
+	protected ChainView<E> setLockDispose(boolean lockDispose)
 	{
 		this.lockDispose = lockDispose;
 		return this;
 	}
 
+	/**
+	 * Internal method returns applicable partitions
+	 * @return partitions
+	 */
 	@SuppressWarnings("unchecked")
 	private Partition<E>[] getPartitions()
 	{
-		if(this.partitions != null)
+		if(this.partitionFilter != null)
 		{
-			return (Partition<E>[])partitions;
+			return (Partition<E>[])partitionFilter;
 		}
 		
 		if((allPartitions == null) || (allPartitions.length != multiChainList.getPartitionSize()))
@@ -146,6 +196,11 @@ public class Chain<E>
 		return (Partition<E>[])allPartitions;
 	}
 	
+	/**
+	 * Returns partition with specified name
+	 * @param partitionName name of partition
+	 * @return partition
+	 */
 	public Partition<E> getPartition(String partitionName)
 	{
 		checkDisposed();
@@ -172,12 +227,15 @@ public class Chain<E>
 		}
 		return null;
 	}
-	
+	/**
+	 * Returns element size
+	 * @return element size
+	 */
 	public int getSize()
 	{
 		checkDisposed();
 		
-		multiChainList.getReadLock().lock();
+		multiChainList.readLock.lock();
 		try
 		{
 			int size = 0;
@@ -191,10 +249,13 @@ public class Chain<E>
 		}
 		finally 
 		{
-			multiChainList.getReadLock().unlock();
+			multiChainList.readLock.unlock();
 		}
 	}
 	
+	/**
+	 * Helps gc to clean memory. After this this chain view is not usable anymore.
+	 */
 	public void dispose()
 	{
 		if(this.lockDispose)
@@ -203,7 +264,7 @@ public class Chain<E>
 		}
 		this.multiChainList = null;
 		this.chainName = null;
-		this.partitions = null;
+		this.partitionFilter = null;
 		this.allPartitions = null;
 		if(this.defaultLinker != null)
 		{
@@ -216,7 +277,12 @@ public class Chain<E>
 		this.defaultLinker = null;
 	}
 	
-	public Chain<E> clear()
+	/**
+	 * Remove all nodes / elements from this chains
+	 * 
+	 * @return this chain view
+	 */
+	public ChainView<E> clear()
 	{
 		checkDisposed();
 		
@@ -280,6 +346,11 @@ public class Chain<E>
 		return this;
 	}
 	
+	/**
+	 * Creates new snapshot of chain
+	 * 
+	 * @return new snapshot
+	 */
 	public Snapshot<E> createImmutableSnapshot()
 	{
 		checkDisposed();
@@ -287,6 +358,11 @@ public class Chain<E>
 		return new ChainSnapshot<E>(this, false);
 	}
 	
+	/**
+	 * Creates new snapshot of chain and removes all nodes / elements from snapshot
+	 * 
+	 * @return new snapshot
+	 */
 	public Snapshot<E> createImmutableSnapshotPoll()
 	{
 		checkDisposed();
@@ -295,11 +371,13 @@ public class Chain<E>
 	}
 	
 	/**
-	 * Don't create new Threads !!!
+	 * Compute procedure undisturbed by concurrency updates.
+	 * 
+	 * <p>Don't create new Threads inside procedure. There is a risk of a deadlock
 	 * 
 	 * @param procedure
 	 */
-	public void computeProcedure(Consumer<Chain<E>> procedure)
+	public void computeProcedure(Consumer<ChainView<E>> procedure)
 	{
 		checkDisposed();
 		
@@ -314,6 +392,9 @@ public class Chain<E>
 		}
 	}
 	
+	/**
+	 * Internal method to check chain is disposed
+	 */
 	private void checkDisposed()
 	{
 		if(this.multiChainList == null)
@@ -322,12 +403,19 @@ public class Chain<E>
 		}
 	}
 	
+	/**
+	 * Internal snapshot class for chain views
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 * @param <E>
+	 */
 	private static class ChainSnapshot<E> extends Snapshot<E>
 	{
 		private List<Snapshot<E>> partitionSnapshots = null;
-		private Chain<E> chain = null;
+		private ChainView<E> chain = null;
 		
-		private ChainSnapshot(Chain<E> chain, boolean poll)
+		private ChainSnapshot(ChainView<E> chain, boolean poll)
 		{
 			super(chain.multiChainList);
 			

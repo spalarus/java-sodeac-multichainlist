@@ -46,7 +46,7 @@ public class WhiteboxChainSnapshotTest
 		linker3.append("11");
 		linkerC.append("12");
 		
-		Chain<String> chain1 = mcl.chain("chain");
+		ChainView<String> chain1 = mcl.createChainView("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",6, snapshot1.size());
 		int index = 0;
@@ -56,7 +56,7 @@ public class WhiteboxChainSnapshotTest
 			index++;
 		}
 		
-		Chain<String> chain2 = mcl.chain("chain", partition1);
+		ChainView<String> chain2 = mcl.createChainView("chain", partition1);
 		Snapshot<String> snapshot2 = chain2.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",2, snapshot2.size());
 		index = 0;
@@ -97,7 +97,7 @@ public class WhiteboxChainSnapshotTest
 		linker3.append("7");
 		linkerC.append("8");
 		
-		Chain<String> chain1 = mcl.chain("chain");
+		ChainView<String> chain1 = mcl.createChainView("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",4, snapshot1.size());
 		int index = 0;
@@ -138,7 +138,7 @@ public class WhiteboxChainSnapshotTest
 		linker3.append("7");
 		linkerC.append("8");
 		
-		Chain<String> chain1 = mcl.chain("chain");
+		ChainView<String> chain1 = mcl.createChainView("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",4, snapshot1.size());
 		int index = 0;
@@ -180,7 +180,7 @@ public class WhiteboxChainSnapshotTest
 		linkerC.append("7");
 		linkerC.append("8");
 		
-		Chain<String> chain1 = mcl.chain("chain");
+		ChainView<String> chain1 = mcl.createChainView("chain");
 		Snapshot<String> snapshot1 = chain1.createImmutableSnapshot();
 		assertEquals("chain size item should be correct",4, snapshot1.size());
 		int index = 0;

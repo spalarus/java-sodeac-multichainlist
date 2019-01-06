@@ -21,6 +21,12 @@ package org.sodeac.multichainlist;
  */
 public class LinkageDefinition<E>
 {
+	/**
+	 * Create LinkageDefinition with chain name and partition
+	 * 
+	 * @param chainName linkage chain name
+	 * @param partition linkage partition
+	 */
 	public LinkageDefinition(String chainName,Partition<E> partition)
 	{
 		super();
@@ -30,10 +36,21 @@ public class LinkageDefinition<E>
 	private String chainName;
 	private Partition<E> partition;
 	
+	/**
+	 * Getter for chain name.
+	 * 
+	 * @return chain name
+	 */
 	public String getChainName()
 	{
 		return chainName;
 	}
+	
+	/**
+	 * Getter for partition
+	 * 
+	 * @return partition
+	 */
 	public Partition<E> getPartition()
 	{
 		return partition;

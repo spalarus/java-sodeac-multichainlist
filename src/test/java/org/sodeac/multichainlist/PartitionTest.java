@@ -30,26 +30,25 @@ public class PartitionTest
 		Partition<String> p1 = multiChainList.definePartition("p1");
 		
 		assertNotNull("partition should not be null",p1);
-		assertEquals("Partition name should be registered",2,multiChainList.getPartitionNameList().size());
-		assertEquals("Partition name should be registered",null,multiChainList.getPartitionNameList().get(0));
-		assertEquals("Partition name should be registered","p1",multiChainList.getPartitionNameList().get(1));
+		assertEquals("Partition name should be registered",2,multiChainList.getPartitionList().size());
+		assertEquals("Partition name should be registered",null,multiChainList.getPartitionList().get(0).getName());
+		assertEquals("Partition name should be registered","p1",multiChainList.getPartitionList().get(1).getName());
 		assertSame("Partition should be registered",p1,multiChainList.getPartition("p1"));
 		assertSame("Partition should be registered",p1,multiChainList.getPartitionList().get(1));
 		assertSame("PartitionList should be cached",multiChainList.getPartitionList(),multiChainList.getPartitionList());
-		assertSame("PartitionNameList should be cached",multiChainList.getPartitionNameList(),multiChainList.getPartitionNameList());
+		assertSame("PartitionNameList should be cached",multiChainList.getPartitionList(),multiChainList.getPartitionList());
 		
 		Partition<String> p2 = multiChainList.definePartition("p2");
 		
 		assertNotNull("partition should not be null",p2);
-		assertEquals("Partition name should be registered",3,multiChainList.getPartitionNameList().size());
-		assertEquals("Partition name should be registered",null,multiChainList.getPartitionNameList().get(0));
-		assertEquals("Partition name should be registered","p1",multiChainList.getPartitionNameList().get(1));
-		assertEquals("Partition name should be registered","p2",multiChainList.getPartitionNameList().get(2));
+		assertEquals("Partition name should be registered",3,multiChainList.getPartitionList().size());
+		assertEquals("Partition name should be registered",null,multiChainList.getPartitionList().get(0).getName());
+		assertEquals("Partition name should be registered","p1",multiChainList.getPartitionList().get(1).getName());
+		assertEquals("Partition name should be registered","p2",multiChainList.getPartitionList().get(2).getName());
 		assertSame("Partition should be registered",p2,multiChainList.getPartition("p2"));
 		assertSame("Partition should be registered",p1,multiChainList.getPartitionList().get(1));
 		assertSame("Partition should be registered",p2,multiChainList.getPartitionList().get(2));
 		assertSame("PartitionList should be cached",multiChainList.getPartitionList(),multiChainList.getPartitionList());
-		assertSame("PartitionNameList should be cached",multiChainList.getPartitionNameList(),multiChainList.getPartitionNameList());
 	}
 	
 	@Test
@@ -61,13 +60,12 @@ public class PartitionTest
 		assertNotNull("partition should not be null",p);
 		assertEquals("Partitions should be created",2,p.size());
 		
-		assertEquals("Partition name should be registered",3,multiChainList.getPartitionNameList().size());
+		assertEquals("Partition name should be registered",3,multiChainList.getPartitionList().size());
 		
-		assertEquals("Partition name should be registered",null,multiChainList.getPartitionNameList().get(0));
-		assertEquals("Partition name should be registered","p1",multiChainList.getPartitionNameList().get(1));
-		assertEquals("Partition name should be registered","p2",multiChainList.getPartitionNameList().get(2));
+		assertEquals("Partition name should be registered",null,multiChainList.getPartitionList().get(0).getName());
+		assertEquals("Partition name should be registered","p1",multiChainList.getPartitionList().get(1).getName());
+		assertEquals("Partition name should be registered","p2",multiChainList.getPartitionList().get(2).getName());
 		
 		assertSame("PartitionList should be cached",multiChainList.getPartitionList(),multiChainList.getPartitionList());
-		assertSame("PartitionNameList should be cached",multiChainList.getPartitionNameList(),multiChainList.getPartitionNameList());
 	}
 }

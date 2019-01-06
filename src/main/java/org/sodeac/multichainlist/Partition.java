@@ -21,10 +21,25 @@ import java.util.Set;
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Node.Link;
 
+/**
+ * A storage which contains elements of list. 
+ * 
+ * @author Sebastian Palarus
+ * @since 1.0
+ * @version 1.0
+ *
+ * @param <E> the type of elements in this list
+ */
 public class Partition<E>
 {
 	public enum LinkMode {APPEND,PREPEND};
 	
+	/**
+	 * constructor to create partition
+	 * 
+	 * @param name partitions name
+	 * @param multiChainList owner list
+	 */
 	protected Partition(String name, MultiChainList<E> multiChainList)
 	{
 		super();
@@ -43,31 +58,60 @@ public class Partition<E>
 	protected Bollard partitionEnd = null;
 	protected Map<String,LinkageDefinition<E>> privateLinkageDefinitions = null;
 	
+	/**
+	 * Getter for partitions name.
+	 * 
+	 * @return partitions name
+	 */
 	public String getName()
 	{
 		return name;
 	}
 
+	/**
+	 * Getter for previews partition in owner list.
+	 * @return previews partition in owner list
+	 */
 	public Partition<E> getPreviewsPartition()
 	{
 		return previews;
 	}
 
+	/**
+	 * Getter for next partition in owner list.
+	 * @return next partition in owner list
+	 */
 	public Partition<E> getNextPartition()
 	{
 		return next;
 	}
 	
+	/**
+	 * Internal method.
+	 * 
+	 * @return begin bollard
+	 */
 	protected Bollard getPartitionBegin()
 	{
 		return partitionBegin;
 	}
 
+	/**
+	 * Internal method.
+	 * 
+	 * @return end bollard
+	 */
 	protected Bollard getPartitionEnd()
 	{
 		return partitionEnd;
 	}
-	
+	 /**
+	  * Internal method to append node.
+	  * 
+	  * @param node node to append
+	  * @param linkageDefinitions definition of chain and partition
+	  * @param currentVersion current version of list
+	  */
 	protected void appendNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
 	{
 		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
@@ -76,6 +120,13 @@ public class Partition<E>
 		}
 	}
 
+	/**
+	 * Internal method to append node.
+	 * 
+	 * @param node node to append
+	 * @param chainName chain name
+	 * @param currentVersion current version of list
+	 */
 	protected void appendNode(Node<E> node, String chainName, SnapshotVersion<E> currentVersion)
 	{
 		LinkageDefinition<E> privateLinkageDefinition = privateLinkageDefinitions.get(chainName);
@@ -149,6 +200,13 @@ public class Partition<E>
 		linkEnd.incrementSize();
 	}
 	
+	 /**
+	  * Internal method to prepend node.
+	  * 
+	  * @param node node to prepend
+	  * @param linkageDefinitions definition of chain and partition
+	  * @param currentVersion current version of list
+	  */
 	protected void prependNode(Node<E> node, Collection<LinkageDefinition<E>> linkageDefinitions, SnapshotVersion<E> currentVersion)
 	{
 		for(LinkageDefinition<E> linkageDefinition : linkageDefinitions)
@@ -157,6 +215,13 @@ public class Partition<E>
 		}
 	}
 	
+	/**
+	 * Internal method to prepend node.
+	 * 
+	 * @param node node to prepend
+	 * @param chainName chain name
+	 * @param currentVersion current version of list
+	 */
 	protected void prependNode(Node<E> node, String chainName, SnapshotVersion<E> currentVersion)
 	{
 		LinkageDefinition<E> linkageDefinition = privateLinkageDefinitions.get(chainName);
@@ -209,10 +274,15 @@ public class Partition<E>
 		linkEnd.incrementSize();
 	}
 
-
+	/**
+	 * Getter for size of elements which belongs to specified chain in this partition.
+	 * 
+	 * @param chainName name of chain
+	 * @return size of elements belongs specified chain in this partition
+	 */
 	public int getSize(String chainName)
 	{
-		multiChainList.getReadLock().lock();
+		multiChainList.readLock.lock();
 		try
 		{
 			Eyebolt<E> beginLink = partitionBegin.getLink(chainName);
@@ -220,13 +290,19 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.getReadLock().unlock();
+			multiChainList.readLock.unlock();
 		}
 	}
 	
+	/**
+	 * Getter for first element of specified chain in this partition
+	 * 
+	 * @param chainName name of chain
+	 * @return first element of specified chain in this partition
+	 */
 	public E getFirstElement(String chainName)
 	{
-		multiChainList.getReadLock().lock();
+		multiChainList.readLock.lock();
 		try
 		{
 			Eyebolt<E> beginLink = partitionBegin.getLink(chainName);
@@ -242,13 +318,19 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.getReadLock().unlock();
+			multiChainList.readLock.unlock();
 		}
 	}
 	
+	/**
+	 * Getter for last element of specified chain in this partition
+	 * 
+	 * @param chainName name of chain
+	 * @return last element of specified chain in this partition
+	 */
 	public E getLastElement(String chainName)
 	{
-		multiChainList.getReadLock().lock();
+		multiChainList.readLock.lock();
 		try
 		{
 			Eyebolt<E> endLink = partitionEnd.getLink(chainName);
@@ -264,10 +346,17 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.getReadLock().unlock();
+			multiChainList.readLock.unlock();
 		}
 	}
 	
+	/**
+	 * Internal method to create a snapshot for specified chains in this partition
+	 * 
+	 * @param chainName name of chain
+	 * @param currentVersion current version of list
+	 * @return snapshot for specified chains in this partition
+	 */
 	protected Snapshot<E> createSnapshot(String chainName, SnapshotVersion<E> currentVersion)
 	{
 		multiChainList.writeLock.lock();
@@ -283,6 +372,12 @@ public class Partition<E>
 		}
 	}
 	
+	/**
+	 * Internal helper class to manage all chains of partition.
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 */
 	protected class Bollard extends Node<E>
 	{
 		protected Bollard()
@@ -315,6 +410,13 @@ public class Partition<E>
 		}
 	}
 
+	/**
+	 * Internal helper class to manage a chain in partition
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 * @param <E> the type of elements in this list
+	 */
 	protected static class Eyebolt<E> extends Link<E>
 	{
 		protected Eyebolt(LinkageDefinition<E> linkageDefinition, Node<E> parent, SnapshotVersion<E> currentVersion)
@@ -408,6 +510,13 @@ public class Partition<E>
 		return "[partition: " + this.name + "]";
 	}	
 	
+	/**
+	 * return string with informations of specified chain
+	 * 
+	 * @param chainName chain
+	 * 
+	 * @return informations of specified chain
+	 */
 	public String getListInfo(String chainName)
 	{
 		multiChainList.writeLock.lock();

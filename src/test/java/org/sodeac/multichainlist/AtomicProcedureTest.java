@@ -23,10 +23,10 @@ public class AtomicProcedureTest
 	public void test00001ProcedureTest1() throws Exception
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<String>();
-		multiChainList.chain(null).defaultLinker().appendAll("1","2","3","5");
+		multiChainList.createChainView(null).defaultLinker().appendAll("1","2","3","5");
 		multiChainList.computeProcedure(m -> 
 		{
-			Chain<String> defaultChain = m.chain(null);
+			ChainView<String> defaultChain = m.createChainView(null);
 			Snapshot<String> s = defaultChain.createImmutableSnapshotPoll();
 			for(String item : s)
 			{
@@ -40,7 +40,7 @@ public class AtomicProcedureTest
 			defaultChain.dispose();
 		}) ;
 		
-		Chain<String> defaultChain = multiChainList.chain(null);
+		ChainView<String> defaultChain = multiChainList.createChainView(null);
 		assertEquals("list size should be correct", 5, defaultChain.getSize());
 		Snapshot<String> s = defaultChain.createImmutableSnapshot();
 		int index = 1;
@@ -55,7 +55,7 @@ public class AtomicProcedureTest
 	public void test00002ProcedureTest1() throws Exception
 	{
 		MultiChainList<String> multiChainList = new MultiChainList<String>();
-		Chain<String> defaultChain = multiChainList.chain(null);
+		ChainView<String> defaultChain = multiChainList.createChainView(null);
 		defaultChain.defaultLinker().appendAll("1","2","3","5");
 		defaultChain.computeProcedure(m -> 
 		{

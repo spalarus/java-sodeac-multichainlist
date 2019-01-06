@@ -14,6 +14,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Node.Link;
@@ -69,6 +71,10 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return parent;
 	}
 
+	/**
+	 * Returns name of chain
+	 * @return name of chain
+	 */
 	public String getChainName()
 	{
 		return chainName;
@@ -81,7 +87,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		{
 			return;
 		}
-		this.parent.getWriteLock().lock();
+		this.parent.writeLock.lock();
 		try
 		{
 			closed = true;
@@ -89,16 +95,36 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		}
 		finally 
 		{
-			this.parent.getWriteLock().unlock();
+			this.parent.writeLock.unlock();
 		}
 	}
+	
+	/**
+	 * returns if snapshot is closed
+	 * 
+	 * @return true if snapshot is closed, otherwise false
+	 */
+	public boolean isClosed()
+	{
+		return closed;
+	}
 
+	/**
+	 * Returns version of list the snapshot was created
+	 * @return version of list the snapshot was created
+	 */
 	public long getVersion()
 	{
 		return this.version.getSequence();
 	}
 	
-	public Link<E> getLink(Object o)
+	/**
+	 * Find link by element (same reference)
+	 * 
+	 * @param o element
+	 * @return matched link
+	 */
+	protected Link<E> getLink(E o)
 	{
 		for(Link<E> element : this.linkIterable())
 		{
@@ -110,7 +136,14 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return null;
 	}
 	
-	public Node<E> getNode(Object o)
+	
+	/**
+	 * Find node by element (same reference)
+	 * 
+	 * @param o element
+	 * @return matched node
+	 */
+	public Node<E> getNode(E o)
 	{
 		for(Link<E> element : this.linkIterable())
 		{
@@ -132,6 +165,11 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return new ElementSnapshotIterator();
 	}
 	
+	/**
+	 * Returns link iterable
+	 * 
+	 * @return link iterable
+	 */
 	protected Iterable<Link<E>> linkIterable()
 	{
 		if(closed)
@@ -147,6 +185,11 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		} ;
 	}
 	
+	/**
+	 * Returns node iterable
+	 * 
+	 * @return node iterable
+	 */
 	public Iterable<Node<E>> nodeIterable()
 	{
 		if(closed)
@@ -160,6 +203,15 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 				 return new NodeSnapshotIterator();
 			 }
 		} ;
+	}
+	
+	/**
+	 * Returns node stream
+	 * @return node stream
+	 */
+	public Stream<Node<E>> nodeStream()
+	{
+		return StreamSupport.stream(nodeIterable().spliterator(), false);
 	}
 	
 	@Override
@@ -284,6 +336,10 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		throw new UnsupportedOperationException();
 	}
 	
+	/**
+	 * Returns first element
+	 * @return first element 
+	 */
 	public E getFirstElement()
 	{
 		Link<E> firstLink = getFirstLink();
@@ -303,6 +359,10 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return this.firstLink;
 	}
 	
+	/**
+	 * Returns first node
+	 * @return first node
+	 */
 	public Node<E> getFirstNode()
 	{
 		if(this.closed)
@@ -312,6 +372,10 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return this.firstLink == null ? null : this.firstLink.node;
 	}
 	
+	/**
+	 * Returns last element
+	 * @return last element
+	 */
 	public E getLastElement()
 	{
 		Link<E> lastLink = getLastLink();
@@ -331,6 +395,10 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return this.lastLink;
 	}
 	
+	/**
+	 * Returns last node
+	 * @return last node
+	 */
 	public Node<E> getLastNode()
 	{
 		if(this.closed)
@@ -340,6 +408,12 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		return this.lastLink == null ? null : this.lastLink.node;
 	}
 	
+	/**
+	 * private helper class
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 */
 	private class LinkSnapshotIterator extends SnapshotIterator implements Iterator<Link<E>>
 	{
 		
@@ -350,6 +424,12 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		}
 	}
 	
+	/**
+	 * private helper class
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 */
 	private class NodeSnapshotIterator extends SnapshotIterator implements Iterator<Node<E>>
 	{
 		
@@ -360,6 +440,12 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		}
 	}
 	
+	/**
+	 * private helper class
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 */
 	private class ElementSnapshotIterator extends SnapshotIterator implements Iterator<E>
 	{
 		@Override
@@ -369,6 +455,12 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		}
 	}
 	
+	/**
+	 * private helper class
+	 * 
+	 * @author Sebastian Palarus
+	 *
+	 */
 	private abstract class SnapshotIterator
 	{
 		private Link<E> previews = null;

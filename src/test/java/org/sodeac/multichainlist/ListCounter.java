@@ -25,7 +25,7 @@ public class ListCounter implements IListEventHandler<String>
 	}
 
 	@Override
-	public void onClearNode(MultiChainList<String> multiChainList, String element)
+	public void onDisposeNode(MultiChainList<String> multiChainList, String element)
 	{
 		count--;
 	}

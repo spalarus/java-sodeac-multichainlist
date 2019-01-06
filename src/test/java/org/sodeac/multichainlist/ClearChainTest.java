@@ -37,7 +37,7 @@ public class ClearChainTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		multiChainList.chain(null).clear();
+		multiChainList.createChainView(null).clear();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		
@@ -63,9 +63,9 @@ public class ClearChainTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot = multiChainList.chain(null).createImmutableSnapshot();
+		Snapshot<String> snapshot = multiChainList.createChainView(null).createImmutableSnapshot();
 		
-		multiChainList.chain(null).clear();
+		multiChainList.createChainView(null).clear();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		
@@ -111,7 +111,7 @@ public class ClearChainTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshot = multiChainList.chain(null).createImmutableSnapshotPoll();
+		Snapshot<String> snapshot = multiChainList.createChainView(null).createImmutableSnapshotPoll();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		
@@ -157,9 +157,9 @@ public class ClearChainTest
 		
 		assertEquals("list size should be correct ", content.size(), multiChainList.getNodeSize());
 		
-		Snapshot<String> snapshotX = multiChainList.chain(null).createImmutableSnapshot();
+		Snapshot<String> snapshotX = multiChainList.createChainView(null).createImmutableSnapshot();
 		
-		Snapshot<String> snapshot = multiChainList.chain(null).createImmutableSnapshotPoll();
+		Snapshot<String> snapshot = multiChainList.createChainView(null).createImmutableSnapshotPoll();
 		
 		assertEquals("list size should be correct ", 0, multiChainList.getNodeSize());
 		

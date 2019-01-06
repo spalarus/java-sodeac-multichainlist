@@ -52,7 +52,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		Link<String> link1S1 = node1.headOfDefaultChain;
 		
-		assertEquals("mcl should holds correct size of snapshot version", 0, mcl.openSnapshotVersionSize());
+		assertEquals("mcl should holds correct size of snapshot version", 0, mcl.openSnapshotVersionList.size());
 		
 		
 		// Test Begin Link1
@@ -111,7 +111,7 @@ public class WhiteboxSingleAppendAndRemoveTest
 		System.out.println(partition.getListInfo(null));
 
 		assertSame("beginLink1 should be beginLink2",beginLink1,beginLink2);
-		assertEquals("mcl should holds correct size of snapshot version", 0, mcl.openSnapshotVersionSize());
+		assertEquals("mcl should holds correct size of snapshot version", 0, mcl.openSnapshotVersionList.size());
 		
 		// Retest BeginLink1
 		
@@ -176,11 +176,11 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 		
-		Snapshot<String> snapshot1 = mcl.chain(null).createImmutableSnapshot();
+		Snapshot<String> snapshot1 = mcl.createChainView(null).createImmutableSnapshot();
 		iterator = snapshot1.linkIterable().iterator();
 		Link<String> link1S1 = iterator.next();
 		
-		assertEquals("mcl should holds correct size of snapshot version", 1, mcl.openSnapshotVersionSize());
+		assertEquals("mcl should holds correct size of snapshot version", 1, mcl.openSnapshotVersionList.size());
 		assertFalse("iterator1  should has no more elements",iterator.hasNext());
 		
 		// Test Begin Link1
@@ -230,9 +230,9 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 
-		Snapshot<String> snapshot2 = mcl.chain(null).createImmutableSnapshot();
+		Snapshot<String> snapshot2 = mcl.createChainView(null).createImmutableSnapshot();
 		iterator = snapshot2.linkIterable().iterator();
-		assertEquals("mcl should holds correct size of snapshot version", 2, mcl.openSnapshotVersionSize());
+		assertEquals("mcl should holds correct size of snapshot version", 2, mcl.openSnapshotVersionList.size());
 		assertFalse("iterator 2 should has no more elements",iterator.hasNext());
 		
 		iterator = snapshot1.linkIterable().iterator();
@@ -404,11 +404,11 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 		
-		Snapshot<String> snapshot1 = mcl.chain(null).createImmutableSnapshot();
+		Snapshot<String> snapshot1 = mcl.createChainView(null).createImmutableSnapshot();
 		iterator = snapshot1.linkIterable().iterator();
 		Link<String> link1S1 = iterator.next();
 		
-		assertEquals("mcl should holds correct size of snapshot version", 1, mcl.openSnapshotVersionSize());
+		assertEquals("mcl should holds correct size of snapshot version", 1, mcl.openSnapshotVersionList.size());
 		assertFalse("iterator1  should has no more elements",iterator.hasNext());
 		
 		// Test Begin Link1
@@ -459,8 +459,8 @@ public class WhiteboxSingleAppendAndRemoveTest
 		
 		System.out.println(partition.getListInfo(null));
 
-		Snapshot<String> snapshot2 = mcl.chain(null).createImmutableSnapshot();
-		assertEquals("mcl should holds correct size of snapshot version", 2, mcl.openSnapshotVersionSize());
+		Snapshot<String> snapshot2 = mcl.createChainView(null).createImmutableSnapshot();
+		assertEquals("mcl should holds correct size of snapshot version", 2, mcl.openSnapshotVersionList.size());
 		
 		iterator = snapshot2.linkIterable().iterator();
 		assertFalse("iterator 2 should has no more elements",iterator.hasNext());

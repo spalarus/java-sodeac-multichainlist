@@ -2,15 +2,15 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.sodeac</groupId>
   <artifactId>org.sodeac.multichainlist</artifactId>
-  <version>0.9.5-SNAPSHOT</version>
-  <name>Sodeac Multi Chain LinkedList</name>
-  <description>A snapshotable linkedlist with multible chains, grouped in partitions</description>
+  <version>1.0.0</version>
+  <name>Sodeac multichainlist</name>
+  <description>A snapshotable linked list with multiple chains, grouped in partitions</description>
   <packaging>bundle</packaging>
   
  <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jdk.version>1.8</jdk.version>
-    <bundle.version>0.9.5</bundle.version>
+    <bundle.version>1.0.0</bundle.version>
   </properties>
   
   <dependencies>
@@ -52,23 +52,37 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.7.0</version>
+        <version>3.8.0</version>
         <configuration>
           <source>${jdk.version}</source>
           <target>${jdk.version}</target>
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <version>1.4</version>
+		<executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <extensions>true</extensions>
-        <version>3.5.1</version>
+        <version>4.1.0</version>
         <configuration>
           <instructions>
           	<Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
             <Bundle-Version>${bundle.version}</Bundle-Version>
             <Bundle-RequiredExecutionEnvironment>JavaSE-1.8</Bundle-RequiredExecutionEnvironment>
             <Bundle-ActivationPolicy>lazy</Bundle-ActivationPolicy>
+            <Implementation-Build>${scmBranch}@r${buildNumber}</Implementation-Build>
             <Export-Package>org.sodeac.multichainlist;version="${bundle.version}"</Export-Package>
           </instructions>
           <source>${jdk.version}</source>

@@ -22,6 +22,14 @@ import java.util.Map.Entry;
 
 import java.util.Set;
 
+/**
+ * 
+ * @author Sebastian Palarus
+ * @since 1.0
+ * @version 1.0
+ * 
+ * @param <E> the type of elements in this list
+ */
 public class Linker<E>
 {
 	private MultiChainList<E> multiChainList = null;
@@ -43,6 +51,11 @@ public class Linker<E>
 		}
 	}
 	
+	/**
+	 * Getter for container with all linkage definitions concerning this linker
+	 * 
+	 * @return container with all linkage definitions concerning this linker
+	 */
 	public LinkageDefinitionContainer getLinkageDefinitionContainer()
 	{
 		LinkageDefinitionContainer currentLinkageDefinitionContainer = this.linkageDefinitionContainer;
@@ -72,44 +85,93 @@ public class Linker<E>
 		return currentLinkageDefinitionContainer;
 	}
 	
+	/**
+	 * Returns configured partition for chain
+	 * 
+	 * @param chainName name of chain 
+	 * @return configured partition for chain
+	 */
 	public Partition<E> getPartitionForChain(String chainName)
 	{
 		LinkageDefinition<E> linkageDefinition = getLinkageDefinitionContainer().indexedByChain.get(chainName);
 		return linkageDefinition == null ? null : linkageDefinition.getPartition();
 	}
 	
+	/**
+	 * Appends the specified element to the end of all list areas (chain / partition) for which this linker is configured.
+	 *  
+	 * @param element element to be appended
+	 * @return container node responsible to manage appended element
+	 */
 	public Node<E> append(E element)
 	{
 		return link(Partition.LinkMode.APPEND,element);
 	}
 	
+	/**
+	 * Appends all of the elements to the end of all list areas (chain / partition) for which this linker is configured.
+	 * 
+	 * @param elements elements to be appended
+	 * @return container nodes responsible to manage appended elements
+	 */
 	@SafeVarargs
 	public final Node<E>[] appendAll(E... elements)
 	{
 		return linkAll(Partition.LinkMode.APPEND, Arrays.<E>asList(elements));
 	}
 	
+	/**
+	 * Appends all of the elements to the end of all list areas (chain / partition) for which this linker is configured.
+	 * 
+	 * @param elements elements to be appended
+	 * @return container nodes responsible to manage appended elements
+	 */
 	public Node<E>[] appendAll(Collection<E> elements)
 	{
 		return linkAll(Partition.LinkMode.APPEND, elements);
 	}
 	
+	/**
+	 * Prepends the specified element to the begin of all list areas (chain / partition) for which this linker is configured.
+	 *  
+	 * @param element element to be prepended
+	 * @return container node responsible to manage prepended element
+	 */
 	public Node<E> prepend(E element)
 	{
 		return link(Partition.LinkMode.PREPEND,element);
 	}
 	
+	/**
+	 * Prepends all of the elements to the begin of all list areas (chain / partition) for which this linker is configured.
+	 * 
+	 * @param elements elements to be prepended
+	 * @return container nodes responsible to manage appended elements
+	 */
 	@SafeVarargs
 	public final Node<E>[] prependAll(E... elements)
 	{
 		return linkAll(Partition.LinkMode.PREPEND, Arrays.<E>asList(elements));
 	}
 	
+	/**
+	 * Prepends all of the elements to the begin of all list areas (chain / partition) for which this linker is configured.
+	 * 
+	 * @param elements elements to be prepended
+	 * @return container nodes responsible to manage appended elements
+	 */
 	public Node<E>[] prependAll(Collection<E> elements)
 	{
 		return linkAll(Partition.LinkMode.PREPEND, elements);
 	}
 
+	/**
+	 * Internal method to link element
+	 * 
+	 * @param linkMode append or prepend
+	 * @param element item to link
+	 * @return node
+	 */
 	private Node<E> link(Partition.LinkMode linkMode, E element)
 	{
 		LinkageDefinitionContainer currentLinkageDefinitionContainer = getLinkageDefinitionContainer();
@@ -147,7 +209,7 @@ public class Linker<E>
 			node = new Node<E>(element,this.multiChainList);
 			for(Entry<String,Map<String,LinkageDefinition<E>>> entry : currentLinkageDefinitionContainer.indexedByPartitionAndChain.entrySet())
 			{
-				Partition<E> partition = multiChainList.getPartition(entry.getKey());
+				Partition<E> partition = multiChainList.partitionList.get(entry.getKey());
 				if(linkMode == Partition.LinkMode.PREPEND)
 				{
 					partition.prependNode(node, entry.getValue().values(), multiChainList.modificationVersion);
@@ -165,6 +227,13 @@ public class Linker<E>
 		return node;
 	}
 	
+	/**
+	 * Internal method to link elements
+	 * 
+	 * @param linkMode append or prepend
+	 * @param elements items to link
+	 * @return nodes
+	 */
 	@SuppressWarnings("unchecked")
 	private Node<E>[] linkAll(Partition.LinkMode linkMode, Collection<E> elements)
 	{
@@ -217,7 +286,7 @@ public class Linker<E>
 				nodes[index++] = node;
 				for(Entry<String,Map<String,LinkageDefinition<E>>> entry : currentLinkageDefinitionContainer.indexedByPartitionAndChain.entrySet())
 				{
-					Partition<E> partition = multiChainList.getPartition(entry.getKey());
+					Partition<E> partition = multiChainList.partitionList.get(entry.getKey());
 					if(linkMode == Partition.LinkMode.PREPEND)
 					{
 						partition.prependNode(node, entry.getValue().values(), multiChainList.modificationVersion);
@@ -236,6 +305,14 @@ public class Linker<E>
 		return nodes;
 	}
 	
+	/**
+	 * A container with all linkage definitions. 
+	 * 
+	 * @author Sebastian Palarus
+	 * @since 1.0
+	 * @version 1.0
+	 *
+	 */
 	public class LinkageDefinitionContainer
 	{
 		private Map<String,Map<String,LinkageDefinition<E>>> indexedByPartitionAndChain = new HashMap<String,Map<String,LinkageDefinition<E>>>();
@@ -249,7 +326,13 @@ public class Linker<E>
 			this.multiChainList = multiChainList;
 		}
 		
-		public LinkageDefinitionContainer add(LinkageDefinition<E> linkageDefinition)
+		/**
+		 * Add linkage definition to container 
+		 * 
+		 * @param linkageDefinition linkage definition to add
+		 * @return this LinkageDefinitionContainer
+		 */
+		private LinkageDefinitionContainer add(LinkageDefinition<E> linkageDefinition)
 		{
 			if(indexedByChain.containsKey(linkageDefinition.getChainName()))
 			{
@@ -269,7 +352,12 @@ public class Linker<E>
 			return this;
 		}
 		
-		public LinkageDefinitionContainer complete()
+		/**
+		 * prevents further changes 
+		 * 
+		 * @return this LinkageDefinitionContainer
+		 */
+		private LinkageDefinitionContainer complete()
 		{
 			for(Entry<String,Map<String,LinkageDefinition<E>>> entry : indexedByPartitionAndChain.entrySet())
 			{
@@ -282,26 +370,51 @@ public class Linker<E>
 			return this;
 		}
 
-		public MultiChainList<E> getMultiChainList()
+		/**
+		 * Getter for multichainlist
+		 * 
+		 * @return multichainlist
+		 */
+		protected MultiChainList<E> getMultiChainList()
 		{
 			return this.multiChainList;
 		}
-
+		
+		/**
+		 * Getter for all linkage definitions exists in this container indexed by partitionName and chainName
+		 * 
+		 * <p> Map&lt;partitionName, Map&lt;chainName, LinkageDefinition&lt;E&gt;&gt;&gt;
+		 * 
+		 * @return Map with all linkage definitions exists in this container indexed by partitionName and chainName
+		 */
 		public Map<String, Map<String, LinkageDefinition<E>>> getIndexedByPartitionAndChain()
 		{
 			return indexedByPartitionAndChain;
 		}
 
+		/**
+		 * Getter for all linkage definitions exists in this container indexed by chainName
+		 * 
+		 * @return Map with all linkage definitions exists in this container indexed by chainName
+		 */
 		public Map<String, LinkageDefinition<E>> getIndexedByChain()
 		{
 			return indexedByChain;
 		}
 
+		/**
+		 * Getter for all linkage definitions exists in this container.
+		 * 
+		 * @return
+		 */
 		public List<LinkageDefinition<E>> getLinkageDefinitionList()
 		{
 			return linkageDefinitionList;
 		}
 		
+		/**
+		 * helps gc
+		 */
 		private void dispose()
 		{
 			try
@@ -338,11 +451,21 @@ public class Linker<E>
 		
 	}
 	
+	/**
+	 * Static way to create linkage definition container.
+	 * 
+	 * @param builder
+	 * @param multiChainList
+	 * @return
+	 */
 	public static <T> Linker<T>.LinkageDefinitionContainer createLinkageDefinitionContainer(LinkerBuilder builder, MultiChainList<T> multiChainList)
 	{
 		return builder.build(multiChainList).getLinkageDefinitionContainer();
 	}
 	
+	/**
+	 * helps gc
+	 */
 	protected void dispose()
 	{
 		for(Set<String> value : chainsByPartition.values())
