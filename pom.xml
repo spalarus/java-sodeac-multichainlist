@@ -3,8 +3,8 @@
   <groupId>org.sodeac</groupId>
   <artifactId>org.sodeac.multichainlist</artifactId>
   <version>1.0.0</version>
-  <name>Sodeac multichainlist</name>
-  <description>A snapshotable linked list with multiple chains, grouped in partitions</description>
+  <name>A snapshotable and partable list</name>
+  <description>No class of this project implements java.util.List. The goal is to prevent a performance slump for very large snapshotable lists and provide capabilities to structure the elements inside. Unlike CopyOnWriteArrayList a multichainlist never creates a deep copy, neither when modifying, nor when reading.</description>
   <packaging>bundle</packaging>
   
  <properties>
