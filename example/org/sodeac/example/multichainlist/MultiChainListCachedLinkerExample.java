@@ -35,20 +35,18 @@ public class MultiChainListCachedLinkerExample
 		
 		new Thread(() -> 
 		{ 
-			try(Snapshot<Task> tasksAlice = tasks.createChainView(ALICE).createImmutableSnapshot())
+			try(Snapshot<Task> tasksAlice = tasks.createChainView(ALICE).createImmutableSnapshotPoll())
 			{
 				tasksAlice.forEach( t -> { t.takeOverTask().runBy(ALICE);});
 			}
-			
 		}).start();
 		
 		new Thread(() -> 
 		{ 
-			try(Snapshot<Task> tasksBob = tasks.createChainView(BOB).createImmutableSnapshot())
+			try(Snapshot<Task> tasksBob = tasks.createChainView(BOB).createImmutableSnapshotPoll())
 			{
 				tasksBob.forEach( t -> { t.takeOverTask().runBy(BOB);});
 			}
-			
 		}).start();
 		
 	}

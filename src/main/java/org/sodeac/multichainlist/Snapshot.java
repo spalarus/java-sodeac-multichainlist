@@ -25,9 +25,9 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 {
 	protected UUID uuid;
 	protected SnapshotVersion<E> version;
-	private Partition<E> partition;
+	protected Partition<E> partition;
 	protected MultiChainList<E> parent;
-	private String chainName;
+	protected String chainName;
 	protected Link<E> firstLink;
 	protected Link<E> lastLink;
 	protected volatile boolean closed;

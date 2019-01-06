@@ -458,15 +458,20 @@ public class ChainView<E>
 						super.lastLink = snapshot.lastLink;
 					}
 					this.partitionSnapshots.add(snapshot);
+				}
 					
-					if(poll)
+				if(poll && (! this.partitionSnapshots.isEmpty()))
+				{
+					if(modificationVersion == null)
 					{
-						if(modificationVersion == null)
-						{
-							modificationVersion = this.chain.multiChainList.getModificationVersion();
-						}
-						
+						modificationVersion = this.chain.multiChainList.getModificationVersion();
+					}
+					for(Snapshot<E> snaphot : this.partitionSnapshots)
+					{
+						Partition<E> partition = snaphot.partition;
+						Eyebolt<E> beginLink = partition.getPartitionBegin().getLink(this.chain.chainName);
 						Eyebolt<E> endLink = partition.getPartitionEnd().getLink(this.chain.chainName);
+						
 						beginLink = beginLink.createNewerLink(modificationVersion, null);
 						endLink.previewsLink = beginLink;
 						beginLink.nextLink = endLink;
