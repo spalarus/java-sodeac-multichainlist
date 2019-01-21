@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Node.Link;
@@ -282,7 +283,8 @@ public class Partition<E>
 	 */
 	public int getSize(String chainName)
 	{
-		multiChainList.readLock.lock();
+		Lock lock = multiChainList.readLock;
+		lock.lock();
 		try
 		{
 			Eyebolt<E> beginLink = partitionBegin.getLink(chainName);
@@ -290,7 +292,7 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -302,7 +304,8 @@ public class Partition<E>
 	 */
 	public E getFirstElement(String chainName)
 	{
-		multiChainList.readLock.lock();
+		Lock lock = multiChainList.readLock;
+		lock.lock();
 		try
 		{
 			Eyebolt<E> beginLink = partitionBegin.getLink(chainName);
@@ -318,7 +321,7 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -330,7 +333,8 @@ public class Partition<E>
 	 */
 	public E getLastElement(String chainName)
 	{
-		multiChainList.readLock.lock();
+		Lock lock = multiChainList.readLock;
+		lock.lock();
 		try
 		{
 			Eyebolt<E> endLink = partitionEnd.getLink(chainName);
@@ -346,7 +350,7 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -359,7 +363,8 @@ public class Partition<E>
 	 */
 	protected Snapshot<E> createSnapshot(String chainName, SnapshotVersion<E> currentVersion)
 	{
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			Snapshot<E> snapshot = new Snapshot<>(currentVersion, chainName, this, this.multiChainList);
@@ -368,7 +373,7 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -519,7 +524,8 @@ public class Partition<E>
 	 */
 	public String getListInfo(String chainName)
 	{
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			StringBuilder builder = new StringBuilder();
@@ -660,7 +666,7 @@ public class Partition<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	

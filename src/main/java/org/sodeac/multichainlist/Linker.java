@@ -19,7 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
+import java.util.concurrent.locks.Lock;
 import java.util.Set;
 
 /**
@@ -201,7 +201,8 @@ public class Linker<E>
 			return null;
 		}
 		
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			multiChainList.getModificationVersion();
@@ -222,7 +223,7 @@ public class Linker<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 		return node;
 	}
@@ -273,7 +274,8 @@ public class Linker<E>
 			return null;
 		}
 		
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			multiChainList.getModificationVersion();
@@ -300,7 +302,7 @@ public class Linker<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 		return nodes;
 	}

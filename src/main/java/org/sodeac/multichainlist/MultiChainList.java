@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
@@ -63,9 +64,9 @@ public class MultiChainList<E>
 			partitionNames = new String[] {null};
 		}
 		this.uuid = UUID.randomUUID();
-		this.lock = new ReentrantReadWriteLock(true);
-		this.readLock = this.lock.readLock();
-		this.writeLock = this.lock.writeLock();
+		this.rwLock = new ReentrantReadWriteLock(true);
+		this.readLock = this.rwLock.readLock();
+		this.writeLock = this.rwLock.writeLock();
 		this.partitionList = new HashMap<String, Partition<E>>();
 		this.definePartitions(partitionNames);
 		this.modificationVersion = new SnapshotVersion<E>(this,0L);
@@ -75,7 +76,7 @@ public class MultiChainList<E>
 		this.defaultLinker = LinkerBuilder.newBuilder().inPartition(this.lastPartition.getName()).linkIntoChain(null).build(this);
 	}
 	
-	protected ReentrantReadWriteLock lock;
+	protected ReentrantReadWriteLock rwLock;
 	protected ReadLock readLock;
 	protected WriteLock writeLock;
 	
@@ -181,14 +182,15 @@ public class MultiChainList<E>
 			return partitionList.size();
 		}
 		
-		readLock.lock();
+		Lock lock = readLock;
+		lock.lock();
 		try
 		{
 			return this.partitionList.size();
 		}
 		finally
 		{
-			readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -204,7 +206,8 @@ public class MultiChainList<E>
 		{
 			return chainNameList;
 		}
-		readLock.lock();
+		Lock lock = readLock;
+		lock.lock();
 		try
 		{
 			if(this.chainNameListCopy != null)
@@ -224,7 +227,7 @@ public class MultiChainList<E>
 		}
 		finally
 		{
-			readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -241,7 +244,8 @@ public class MultiChainList<E>
 			return partitionList;
 		}
 		
-		readLock.lock();
+		Lock lock = readLock;
+		lock.lock();
 		try
 		{
 			List<Partition<E>> list = new ArrayList<>(this.partitionList.size());
@@ -257,7 +261,7 @@ public class MultiChainList<E>
 		}
 		finally
 		{
-			readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -270,14 +274,15 @@ public class MultiChainList<E>
 	 */
 	public Partition<E> getPartition(String partitionName)
 	{
-		readLock.lock();
+		Lock lock = readLock;
+		lock.lock();
 		try
 		{
 			return this.partitionList.get(partitionName);
 		}
 		finally
 		{
-			readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -293,7 +298,8 @@ public class MultiChainList<E>
 			return;
 		}
 		
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			if(this.registeredChainEventHandlerList == null)
@@ -308,7 +314,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -329,14 +335,15 @@ public class MultiChainList<E>
 			return;
 		}
 		
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			this.registeredChainEventHandlerList.remove(eventHandler);
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -352,7 +359,8 @@ public class MultiChainList<E>
 			return;
 		}
 		
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			if(this.registeredEventHandlerList == null)
@@ -369,7 +377,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -390,7 +398,8 @@ public class MultiChainList<E>
 			return;
 		}
 		
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			LinkedList<IListEventHandler<E>> newList = new LinkedList<IListEventHandler<E>>(this.registeredEventHandlerList);
@@ -399,7 +408,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -430,7 +439,8 @@ public class MultiChainList<E>
 	 */
 	public CachedLinkerBuilder cachedLinkerBuilder()
 	{
-		readLock.lock();
+		Lock lock = readLock;
+		lock.lock();
 		try
 		{
 			if(this.cachedLinkerNodes != null)
@@ -440,10 +450,11 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			readLock.unlock();
+			lock.unlock();
 		}
 		
-		writeLock.lock();
+		lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			if(this.cachedLinkerNodes == null)
@@ -454,7 +465,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -467,7 +478,8 @@ public class MultiChainList<E>
 	 */
 	public ChainView<E> cachedChainView(String chainName, String partitionNameForDefaultLinker)
 	{
-		readLock.lock();
+		Lock lock = readLock;
+		lock.lock();
 		try
 		{
 			if((this.cachedChains != null) && (this.cachedChains.containsKey(chainName)))
@@ -481,10 +493,11 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			readLock.unlock();
+			lock.unlock();
 		}
 		
-		writeLock.lock();
+		lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			if(this.cachedChains == null)
@@ -508,7 +521,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -527,7 +540,8 @@ public class MultiChainList<E>
 		{
 			return;
 		}
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			this.openSnapshotVersionList.remove(snapshotVersion);
@@ -599,7 +613,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -641,7 +655,8 @@ public class MultiChainList<E>
 		}
 		List<Partition<E>> definedPartitionList = new ArrayList<Partition<E>>(partitionNames.length);
 		
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 
@@ -675,7 +690,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 		
 		return Collections.unmodifiableList(definedPartitionList);
@@ -695,7 +710,8 @@ public class MultiChainList<E>
 			return partition;
 		}
 		
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			this.partitionListCopy = null;
@@ -717,7 +733,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 
@@ -746,14 +762,15 @@ public class MultiChainList<E>
 	 */
 	public void computeProcedure(Consumer<MultiChainList<E>> procedure)
 	{
-		writeLock.lock();
+		Lock lock = this.writeLock;
+		lock.lock();
 		try
 		{
 			procedure.accept(this);
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -959,7 +976,8 @@ public class MultiChainList<E>
 		{
 			this.testComplete();
 			
-			MultiChainList.this.readLock.lock();
+			Lock lock = MultiChainList.this.readLock;
+			lock.lock();
 			try
 			{
 				if(stack.isEmpty())
@@ -986,10 +1004,11 @@ public class MultiChainList<E>
 			}
 			finally 
 			{
-				MultiChainList.this.readLock.unlock();
+				lock.unlock();
 			}
 			
-			MultiChainList.this.writeLock.lock();
+			lock = MultiChainList.this.writeLock;
+			lock.lock();
 			try
 			{
 				if(stack.isEmpty())
@@ -1029,7 +1048,7 @@ public class MultiChainList<E>
 			}
 			finally 
 			{
-				MultiChainList.this.writeLock.unlock();
+				lock.unlock();
 			}
 		}
 		
@@ -1043,7 +1062,8 @@ public class MultiChainList<E>
 		{
 			this.testComplete();
 			
-			MultiChainList.this.readLock.lock();
+			Lock lock = MultiChainList.this.readLock;
+			lock.lock();
 			try
 			{
 				if(stack.isEmpty())
@@ -1070,10 +1090,11 @@ public class MultiChainList<E>
 			}
 			finally 
 			{
-				MultiChainList.this.readLock.unlock();
+				lock.unlock();
 			}
 			
-			MultiChainList.this.writeLock.lock();
+			lock = MultiChainList.this.writeLock;
+			lock.lock();
 			try
 			{
 				if(stack.isEmpty())
@@ -1113,7 +1134,7 @@ public class MultiChainList<E>
 			}
 			finally 
 			{
-				MultiChainList.this.writeLock.unlock();
+				lock.unlock();
 			}
 		}
 		
@@ -1248,7 +1269,8 @@ public class MultiChainList<E>
 	 */
 	public void dispose()
 	{
-		writeLock.lock();
+		Lock lock = MultiChainList.this.writeLock;
+		lock.lock();
 		try
 		{
 			if(registeredChainEventHandlerList != null)
@@ -1405,7 +1427,7 @@ public class MultiChainList<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 	}
 }

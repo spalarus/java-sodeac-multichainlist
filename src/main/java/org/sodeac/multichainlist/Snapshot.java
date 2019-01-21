@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -87,7 +88,8 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		{
 			return;
 		}
-		this.parent.writeLock.lock();
+		Lock lock = this.parent.writeLock;
+		lock.lock();
 		try
 		{
 			closed = true;
@@ -95,7 +97,7 @@ public class Snapshot<E> implements AutoCloseable, Collection<E>
 		}
 		finally 
 		{
-			this.parent.writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	

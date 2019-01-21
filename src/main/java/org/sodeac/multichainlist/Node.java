@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Map.Entry;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.concurrent.locks.Lock;
 
 import org.sodeac.multichainlist.MultiChainList.SnapshotVersion;
 import org.sodeac.multichainlist.Partition.Eyebolt;
@@ -61,7 +61,8 @@ public class Node<E>
 		}
 		
 		LinkageDefinition<E>[] definitionList = null;
-		multiChainList.readLock.lock();
+		Lock lock = multiChainList.readLock;
+		lock.lock();
 		try
 		{
 			int count = headOfDefaultChain == null ? 0 : 1;
@@ -81,7 +82,7 @@ public class Node<E>
 		}
 		finally 
 		{
-			multiChainList.readLock.unlock();
+			lock.unlock();
 		}
 		return definitionList;
 		
@@ -100,7 +101,8 @@ public class Node<E>
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
 		
-		multiChainList.readLock.lock();
+		Lock lock = multiChainList.readLock;
+		lock.lock();
 		try
 		{
 			if(chainName == null)
@@ -118,7 +120,7 @@ public class Node<E>
 		}
 		finally 
 		{
-			multiChainList.readLock.unlock();
+			lock.unlock();
 		}
 		
 	}
@@ -177,7 +179,8 @@ public class Node<E>
 		{
 			throw new RuntimeException("partition not member of list");
 		}
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			SnapshotVersion<E> currentVersion = multiChainList.getModificationVersion();
@@ -192,7 +195,7 @@ public class Node<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -220,7 +223,8 @@ public class Node<E>
 			toPartition = multiChainList.getPartition(null);
 		}
 		
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			Partition<E> partition = 
@@ -252,7 +256,7 @@ public class Node<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -265,7 +269,8 @@ public class Node<E>
 		{
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			if(this.headOfDefaultChain != null)
@@ -282,7 +287,7 @@ public class Node<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -308,8 +313,8 @@ public class Node<E>
 		{
 			throw new RuntimeException(new UnsupportedOperationException("node is not payload"));
 		}
-		WriteLock writeLock = multiChainList.writeLock;
-		writeLock.lock();
+		Lock lock = multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			Link<E> link = getLink(chainName);
@@ -321,7 +326,7 @@ public class Node<E>
 		}
 		finally 
 		{
-			writeLock.unlock();
+			lock.unlock();
 		}
 		
 	}

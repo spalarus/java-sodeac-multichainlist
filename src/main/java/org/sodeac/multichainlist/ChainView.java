@@ -15,6 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 import org.sodeac.multichainlist.MultiChainList.ClearCompleteForwardChain;
@@ -235,7 +236,8 @@ public class ChainView<E>
 	{
 		checkDisposed();
 		
-		multiChainList.readLock.lock();
+		Lock lock = multiChainList.readLock;
+		lock.lock();
 		try
 		{
 			int size = 0;
@@ -249,7 +251,7 @@ public class ChainView<E>
 		}
 		finally 
 		{
-			multiChainList.readLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -286,7 +288,8 @@ public class ChainView<E>
 	{
 		checkDisposed();
 		
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			multiChainList.chainNameListCopy = null;
@@ -341,7 +344,7 @@ public class ChainView<E>
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 		return this;
 	}
@@ -381,14 +384,15 @@ public class ChainView<E>
 	{
 		checkDisposed();
 		
-		multiChainList.writeLock.lock();
+		Lock lock = this.multiChainList.writeLock;
+		lock.lock();
 		try
 		{
 			procedure.accept(this);
 		}
 		finally 
 		{
-			multiChainList.writeLock.unlock();
+			lock.unlock();
 		}
 	}
 	
@@ -424,7 +428,8 @@ public class ChainView<E>
 			Partition<E>[] partitions = this.chain.getPartitions();
 			this.partitionSnapshots = new ArrayList<>(partitions.length);
 			
-			this.chain.multiChainList.writeLock.lock();
+			Lock lock = this.chain.multiChainList.writeLock;
+			lock.lock();
 			try
 			{
 				
@@ -510,7 +515,7 @@ public class ChainView<E>
 			}
 			finally 
 			{
-				this.chain.multiChainList.writeLock.unlock();
+				lock.unlock();
 			}
 		}
 
