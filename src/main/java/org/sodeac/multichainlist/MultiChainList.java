@@ -830,10 +830,17 @@ public class MultiChainList<E>
 			{
 				return;
 			}
-			openSnapshots.remove(snapshot);
-			if(openSnapshots.isEmpty())
+			if(openSnapshots == null)
 			{
 				multiChainList.removeSnapshotVersion(this);
+			}
+			else
+			{
+				openSnapshots.remove(snapshot);
+				if(openSnapshots.isEmpty())
+				{
+					multiChainList.removeSnapshotVersion(this);
+				}
 			}
 		}
 
