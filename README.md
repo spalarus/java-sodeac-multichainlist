@@ -3,9 +3,6 @@
 # A snapshotable and partable list
 To avoid misunderstandings, no class of this project implements [java.util.List](https://docs.oracle.com/javase/8/docs/api/java/util/List.html). The goal is to prevent a performance slump for very large snapshotable lists and provide capabilities to structure the elements inside. Unlike [CopyOnWriteArrayList](https://docs.oracle.com/javase/8/docs/api/index.html?java/util/concurrent/CopyOnWriteArrayList.html) a multichainlist never creates a deep copy, neither when modifying, nor when reading.
 
-## Purpose
-For example queuing in concurrency scenarios.
-
 ## Maven
 
 ```xml
