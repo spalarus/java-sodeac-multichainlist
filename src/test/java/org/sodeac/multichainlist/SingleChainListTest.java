@@ -52,4 +52,20 @@ public class SingleChainListTest
 			index++;
 		}
 	}
+	
+	@Test
+	public void test00011SimpleList() throws Exception
+	{
+		SimpleList<String> list = new SimpleList<>();
+		list.defaultLinker().appendAll("1","2","3","4","5");
+		
+		assertEquals("list size should be correct", 5, list.getSize());
+		Snapshot<String> s = list.createImmutableSnapshot();
+		int index = 1;
+		for(String item : s)
+		{
+			assertEquals("item should be correct",Integer.toString(index), item);
+			index++;
+		}
+	}
 }
