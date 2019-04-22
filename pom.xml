@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.sodeac</groupId>
   <artifactId>org.sodeac.multichainlist</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
   <name>Sodeac multichainlist</name>
   <description>A snapshotable and partable list</description>
   <packaging>bundle</packaging>
@@ -10,7 +10,7 @@
  <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jdk.version>1.8</jdk.version>
-    <bundle.version>1.0.1</bundle.version>
+    <bundle.version>1.0.2</bundle.version>
   </properties>
   
   <dependencies>
