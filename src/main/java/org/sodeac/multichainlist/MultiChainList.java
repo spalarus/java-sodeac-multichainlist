@@ -73,6 +73,7 @@ public class MultiChainList<E>
 		this.obsoleteList = new LinkedList<Link<E>>();
 		this.openSnapshotVersionList = new HashSet<SnapshotVersion<E>>();
 		this.nodeSize = 0L;
+		this.nodeMaxSize = Integer.MAX_VALUE;
 		this.defaultLinker = LinkerBuilder.newBuilder().inPartition(this.lastPartition.getName()).linkIntoChain(null).build(this);
 	}
 	
@@ -92,6 +93,7 @@ public class MultiChainList<E>
 	protected volatile LinkedList<IChainEventHandler<E>> registeredChainEventHandlerList = null;
 	protected volatile LinkedList<IListEventHandler<E>> registeredEventHandlerList = null;
 	protected volatile long nodeSize;
+	protected volatile long nodeMaxSize;
 	
 	protected volatile boolean lockDefaultLinker = false;
 	protected volatile Linker<E> defaultLinker =  null;
@@ -169,6 +171,26 @@ public class MultiChainList<E>
 		return nodeSize;
 	}
 	
+	/**
+	 * Getter for max nodeSize
+	 * 
+	 * @return max node size
+	 */
+	public long getNodeMaxSize()
+	{
+		return nodeMaxSize;
+	}
+
+	/**
+	 * Setter for max nodeSize
+	 * 
+	 * @param nodeMaxSize max node size
+	 */
+	public void setNodeMaxSize(long nodeMaxSize)
+	{
+		this.nodeMaxSize = nodeMaxSize;
+	}
+
 	/**
 	 * Returns partitions size
 	 * 

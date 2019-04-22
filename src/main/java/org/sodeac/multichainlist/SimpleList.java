@@ -46,6 +46,24 @@ public class SimpleList<E> extends ChainView<E>
 		throw new UnsupportedOperationException();
 	}
 	
-	
+	/**
+	 * Getter for max size
+	 * 
+	 * @return max size
+	 */
+	public long getMaxSize()
+	{
+		return super.multiChainList.getNodeMaxSize();
+	}
+
+	/**
+	 * Setter for max size
+	 * 
+	 * @param maxSize max size
+	 */
+	public void setMaxSize(long maxSize)
+	{
+		this.multiChainList.setNodeMaxSize(maxSize);
+	}
 	
 }

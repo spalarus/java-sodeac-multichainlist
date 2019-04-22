@@ -540,6 +540,10 @@ public class Node<E>
 						}
 						if(this.headOfDefaultChain == null)
 						{
+							if(startsWithEmptyState && (multiChainList.nodeSize >= multiChainList.nodeMaxSize))
+							{
+								throw new ListFullException(multiChainList.nodeMaxSize);
+							}
 							notify = true;
 							linkSize++;
 						}
@@ -566,6 +570,10 @@ public class Node<E>
 					}
 					if(headsOfAdditionalChains.put(chainName, link) == null)
 					{
+						if(startsWithEmptyState && (multiChainList.nodeSize >= multiChainList.nodeMaxSize))
+						{
+							throw new ListFullException(multiChainList.nodeMaxSize);
+						}
 						notify = true;
 						linkSize++;
 						if (!isPayload())
